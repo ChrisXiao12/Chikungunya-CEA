@@ -1,4 +1,5 @@
 #----
+#this is a test from Rstudio local
 library(tidyverse)
 library(ggplot2)
 library(mc2d)
@@ -80,33 +81,33 @@ C_R_draws <- rep(0,1000)
 C_C_draws <- Chronic_direct + TC_indirect_chronic + 6 * Outpatient_visit
 C_D_draws <- rep(0,1000)
 parametersdf <- data.frame(
-  pbeta = pBeta_draws, 
-  plambda = pLambda_draws, 
-  pgamma = pGamma_draws, 
-  pdelta = pDelta_draws, 
-  pphi = pPhi_draws, 
-  ppsi = pPsi_draws, 
-  pmu = pMu_draws, 
-  pkappa = pKappa_draws, 
-  pomega = pOmega_draws, 
-  discount = discount_draws, 
-  popsize = pop_draws, 
-  fracsusceptible = fracsusceptible_draws, 
-  fracinfected = fracinfected_draws, 
-  cycle_length = cyclelength_draws, 
-  U_S = U_S_draws, 
-  U_V = U_V_draws, 
-  U_E = U_E_draws, 
-  U_I = U_I_draws, 
-  U_R = U_R_draws, 
-  U_C = U_C_draws, 
-  U_D = U_D_draws, 
-  C_S = C_S_draws, 
-  C_V = C_V_draws, 
-  C_E = C_E_draws, 
-  C_I = C_I_draws, 
-  C_R = C_R_draws, 
-  C_C = C_C_draws, 
+  pbeta = pBeta_draws,
+  plambda = pLambda_draws,
+  pgamma = pGamma_draws,
+  pdelta = pDelta_draws,
+  pphi = pPhi_draws,
+  ppsi = pPsi_draws,
+  pmu = pMu_draws,
+  pkappa = pKappa_draws,
+  pomega = pOmega_draws,
+  discount = discount_draws,
+  popsize = pop_draws,
+  fracsusceptible = fracsusceptible_draws,
+  fracinfected = fracinfected_draws,
+  cycle_length = cyclelength_draws,
+  U_S = U_S_draws,
+  U_V = U_V_draws,
+  U_E = U_E_draws,
+  U_I = U_I_draws,
+  U_R = U_R_draws,
+  U_C = U_C_draws,
+  U_D = U_D_draws,
+  C_S = C_S_draws,
+  C_V = C_V_draws,
+  C_E = C_E_draws,
+  C_I = C_I_draws,
+  C_R = C_R_draws,
+  C_C = C_C_draws,
   C_D = C_D_draws
 )
 Vimkunyaparametersdf <- parametersdf
@@ -129,15 +130,15 @@ run_SVEIRD4 <- function(params) {
   fracsusceptible <- params[["fracsusceptible"]]
   fracinfected <- params[["fracinfected"]]
   cycle_length <- params[["cycle_length"]]
-  
+
   U_S <- params[["U_S"]] * cycle_length
   U_E <- params[["U_E"]] * cycle_length
-  U_V <- params[["U_V"]] 
+  U_V <- params[["U_V"]]
   U_I <- params[["U_I"]] * cycle_length
   U_R <- params[["U_R"]] * cycle_length
   U_C <- params[["U_C"]] * cycle_length
   U_D <- 0
-  
+
   C_S <- params[["C_S"]]
   C_E <- params[["C_E"]]
   C_V <- params[["C_V"]]
@@ -145,18 +146,18 @@ run_SVEIRD4 <- function(params) {
   C_R <- params[["C_R"]]
   C_C <- params[["C_C"]]
   C_D <- 0
-  names <- c("S", "E", "V", "I", "R", "C", "D", "N", "Check", 
+  names <- c("S", "E", "V", "I", "R", "C", "D", "N", "Check",
              "SV", "SE", "SD", "VE", "VD", "EI", "ED", "IR", "IC", "ID", "RD", "CR", "CD")
   trace_v <- data.frame(matrix(0, nrow = 520, ncol = length(names)))
   colnames(trace_v) <- names
-  
+
   #initialize trace
   trace_v[1,] <- list(fracsusceptible * popsize, 0, 0, fracinfected * popsize, 0, 0, 0, popsize, 1000, 0, 0, 0, 0,0,0,0,0,0,0,0,0,0)
   trace_nv <- trace_v
-  
-  
+
+
   for(i in 2:length(trace_v$S)){
-    trace_v$SV[i] <- trace_v$S[i-1] * ppsi  
+    trace_v$SV[i] <- trace_v$S[i-1] * ppsi
     trace_v$SE[i] <- trace_v$S[i-1] * pbeta * trace_v$I[i-1] / trace_v$N[i-1]
     trace_v$SD[i] <- trace_v$S[i-1] * pmu
     trace_v$VE[i] <- trace_v$V[i-1] * (1 - pphi) * pbeta * trace_v$I[i-1] / trace_v$N[i-1]
@@ -179,9 +180,9 @@ run_SVEIRD4 <- function(params) {
     trace_v$N[i] <- trace_v$S[i] + trace_v$E[i] + trace_v$V[i] + trace_v$I[i] + trace_v$R[i] + trace_v$C[i]
     trace_v$Check[i] <- trace_v$S[i] + trace_v$V[i] + trace_v$I[i] + trace_v$R[i] + trace_v$C[i] + trace_v$E[i] + trace_v$D[i]
   }
-  
+
   for(i in 2:length(trace_nv$S)){
-    trace_nv$SV[i] <- 0  
+    trace_nv$SV[i] <- 0
     trace_nv$SE[i] <- trace_nv$S[i-1] * pbeta * trace_nv$I[i-1] / trace_nv$N[i-1]
     trace_nv$SD[i] <- trace_nv$S[i-1] * pmu
     trace_nv$VE[i] <- trace_nv$V[i-1] * (1 - pphi) * pbeta * trace_nv$I[i-1] / trace_nv$N[i-1]
@@ -204,7 +205,7 @@ run_SVEIRD4 <- function(params) {
     trace_nv$N[i] <- trace_nv$S[i] + trace_nv$E[i] + trace_nv$V[i] + trace_nv$I[i] + trace_nv$R[i] + trace_nv$C[i]
     trace_nv$Check[i] <- trace_nv$S[i] + trace_nv$V[i] + trace_nv$I[i] + trace_nv$R[i] + trace_nv$C[i] + trace_nv$E[i] + trace_nv$D[i]
   }
-  
+
   utility_vector <- c(U_S, U_E, U_S, U_I, U_R, U_C, U_D)
   cost_vector <- c(C_S, C_E, C_V, C_I, C_R, C_C, C_D)
   utility_trace_v <- trace_v[,1:7]
@@ -217,13 +218,13 @@ run_SVEIRD4 <- function(params) {
   utility_trace_nv <- apply(trace_nv[,1:7], 1, function(row) row * utility_vector)
   utility_trace_nv <- t(utility_trace_nv)
   trace_v$V <- trace_v$SV  # Replace V with SV in the entire trace
-  cost_trace_v <- trace_v[,1:7]  
+  cost_trace_v <- trace_v[,1:7]
   cost_trace_v <- apply(cost_trace_v, 1, function(row) row * cost_vector)
   cost_trace_v <- t(cost_trace_v)
   trace_nv$V <- trace_nv$SV
-  cost_trace_nv <- trace_nv[,1:7]  
+  cost_trace_nv <- trace_nv[,1:7]
   cost_trace_nv <- apply(trace_nv[,1:7], 1, function(row) row * cost_vector)
-  cost_trace_nv <- t(cost_trace_nv)  
+  cost_trace_nv <- t(cost_trace_nv)
   discount_factors <- 1 / (1 + discount) ^ ((0:(520 - 1)) / 52)
   v_eff_d <- sum(rowSums(utility_trace_v) * discount_factors)
   nv_eff_d <- sum(rowSums(utility_trace_nv) * discount_factors)
@@ -238,7 +239,7 @@ library(parallel)
 library(dplyr)
 library(tibble)
 
-num_cores <- detectCores() - 1  
+num_cores <- detectCores() - 1
 cl <- makeCluster(num_cores)  # Create parallel cluster
 
 clusterExport(cl, varlist = c("parametersdf", "run_SVEIRD4"))
@@ -250,7 +251,7 @@ results_list <- parLapply(cl, 1:1000, function(i) {
   # Load required libraries inside worker
   library(dplyr)
   library(tibble)
-  
+
   run_SVEIRD4(parametersdf[i, ])
 })
 
@@ -261,7 +262,7 @@ stopCluster(cl)
 resultsdf <- do.call(rbind, results_list)
 resultsdf <- as.data.frame(resultsdf)
 #----
-num_cores <- detectCores() - 1  
+num_cores <- detectCores() - 1
 cl <- makeCluster(num_cores)  # Create parallel cluster
 
 clusterExport(cl, varlist = c("Vimkunyaparametersdf", "run_SVEIRD4"))
@@ -273,7 +274,7 @@ Vimresults_list <- parLapply(cl, 1:1000, function(i) {
   # Load required libraries inside worker
   library(dplyr)
   library(tibble)
-  
+
   run_SVEIRD4(Vimkunyaparametersdf[i, ])
 })
 
@@ -368,24 +369,24 @@ nmb_list <- list(
 ceac_df <- data.frame()
 
 for (i in seq_along(wtp_values)) {
-  wtp_label <- names(nmb_list$IXCHIQ)[i]  
-  
+  wtp_label <- names(nmb_list$IXCHIQ)[i]
+
   df <- data.frame(
     IXCHIQ = nmb_list$IXCHIQ[[wtp_label]],
     Vimkunya = nmb_list$Vimkunya[[wtp_label]],
     NoVax = nmb_list$NoVax[[wtp_label]]
   )
-  
+
   winner <- apply(df, 1, function(x) names(x)[which.max(x)])
   props <- prop.table(table(winner))
-  
+
   ceac_row <- data.frame(
     WTP = wtp_values[i],
     IXCHIQ = props["IXCHIQ"] %||% 0,
     Vimkunya = props["Vimkunya"] %||% 0,
     NoVax = props["NoVax"] %||% 0
   )
-  
+
   ceac_df <- rbind(ceac_df, ceac_row)
 }
 
@@ -398,7 +399,7 @@ ceac_renamed <- ceac_df %>%
   rename(`No Vaccination` = NoVax)
 ceac_long <- pivot_longer(ceac_renamed, cols = -WTP, names_to = "Strategy", values_to = "Probability")
 n_sim <- 1000
-ceac_long <- ceac_long %>% 
+ceac_long <- ceac_long %>%
   mutate(
     SE = sqrt(Probability * (1-Probability) / n_sim),
     Lower = pmax(Probability - 1.96* SE,0),
@@ -419,18 +420,18 @@ ggplot(ceac_long, aes(x = WTP, y = Probability, color = Strategy, fill = Strateg
 resultsdf <- resultsdf %>% mutate(IC = v_cost_d - nv_cost_d)
 resultsdf <- resultsdf %>% mutate(IE = v_eff_d - nv_eff_d)
 ggplot(resultsdf, aes(x = IE, y = IC)) +
-  geom_point(alpha = 0.5, color = "blue") +  
-  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +  
-  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +  
+  geom_point(alpha = 0.5, color = "blue") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
   labs(
     title = "Cost-Effectiveness Plane",
     x = "Incremental Effectiveness",
     y = "Incremental Cost"
   ) +
-  theme_minimal() + 
+  theme_minimal() +
   theme(
-    plot.title = element_text(hjust = 0.5, face = "bold", size = 12),  
-    axis.title = element_text(size = 12),  
-    axis.text = element_text(size = 10)  
+    plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10)
   ) +
   scale_y_continuous(labels = scales::comma)
