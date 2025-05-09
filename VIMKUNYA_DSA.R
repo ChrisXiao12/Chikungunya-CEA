@@ -2,7 +2,7 @@ library(ggplot2)
 library(dplyr)
 library(tidyr)
 
-# Step 1: Input your data
+
 INMB_data <- data.frame(
   Parameter = c(
     "Vaccine Cost", "Utility Chronic disease", "Chronic disease probability",
@@ -22,7 +22,6 @@ INMB_data <- data.frame(
   Base = rep(7282347.49, 11)
 )
 
-# Step 2: Compute range and sorted order
 INMB_data <- INMB_data %>%
   mutate(Range = abs(UB - LB))
 
@@ -30,7 +29,6 @@ sorted_order <- INMB_data %>%
   arrange(desc(Range)) %>%
   pull(Parameter)
 
-# Step 3: Reshape data and preserve sorting
 plot_data <- INMB_data %>%
   pivot_longer(cols = c("LB", "UB"),
                names_to = "Bound",
@@ -42,29 +40,7 @@ plot_data <- INMB_data %>%
     Parameter = factor(Parameter, levels = rev(sorted_order))  # this is key!
   )
 
-# Step 4: Final tornado plot
-ggplot(plot_data) +
-  geom_segment(aes(x = xmin, xend = xmax, y = Parameter, yend = Parameter, color = Bound),
-               size = 6) +
-  geom_vline(xintercept = INMB_data$Base[1], linetype = "dashed", color = "black") +
-  scale_color_manual(values = c("Lower Bound" = "#3182bd", "Upper Bound" = "#6baed6")) +
-  scale_x_continuous(labels = scales::comma) +
-  labs(
-    title = "Tornado Plot Vimkunya",
-    x = "INMB (USD)",
-    y = "Parameter"
-  ) +
-  theme_minimal(base_size = 13) +
-  theme(
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    axis.line.x = element_line(color = "black", size = 1),
-    axis.line.y = element_line(color = "black", size = 1),
-    axis.ticks.x = element_line(color = "black"),
-    plot.title = element_text(hjust = 0.5, face = "bold"),
-    axis.text.x = element_text(angle = 45, hjust = 1),
-    legend.title = element_blank()
-  )
+
 #----
 #fixed
 ggplot(plot_data) +
