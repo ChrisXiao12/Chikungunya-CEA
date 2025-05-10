@@ -1,8 +1,9 @@
 #----
-#this is a test from Rstudio local
+#packages
 library(tidyverse)
 library(ggplot2)
 library(mc2d)
+library(scales)
 #----
 #SAMPLING PROBABILITY / OTHER PARAMETERS
 R0_draws <- rgamma(1000,shape = 54.8258, scale = 0.0620146)
@@ -392,11 +393,8 @@ for (i in seq_along(wtp_values)) {
 
 #----
 #plots
-library(tidyr)
-library(dplyr)
-
 ceac_renamed <- ceac_df %>%
-  rename(`No Vaccination` = NoVax)
+  rename(`No Vaccination` = NoVax) %>% rename(`Chikungunya Vaccination, Live` = IXCHIQ) %>% rename(`Chikungunya Vaccination, Recombinant` = Vimkunya)
 ceac_long <- pivot_longer(ceac_renamed, cols = -WTP, names_to = "Strategy", values_to = "Probability")
 n_sim <- 1000
 ceac_long <- ceac_long %>%
@@ -406,14 +404,27 @@ ceac_long <- ceac_long %>%
     Upper = Probability + 1.96 * SE
   )
 
+library(scales)  # for comma()
+
 ggplot(ceac_long, aes(x = WTP, y = Probability, color = Strategy, fill = Strategy)) +
-  geom_smooth(se = FALSE, method = "loess", span = 0.85, size = 1.2) +  # smooth curve
+  geom_smooth(se = FALSE, method = "loess", span = 0.85, size = 1.2) +
   geom_ribbon(aes(ymin = Lower, ymax = Upper), alpha = 0.15, color = NA) +
+  scale_x_continuous(labels = comma) +  # thousands separator
   labs(
     x = "Willingness to Pay (USD)",
     y = "Probability Cost-Effective"
   ) +
-  theme_minimal() + theme(legend.position = c(0.75, 0.9))
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = c(0.75, 0.9),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line.x = element_line(color = "black", size = 1),
+    axis.line.y = element_line(color = "black", size = 1),
+    axis.ticks.x = element_line(color = "black"),
+    axis.ticks.y = element_line(color = "black")
+  )
+
 
 
 
