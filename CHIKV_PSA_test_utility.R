@@ -35,14 +35,14 @@ cyclelength_draws <- rep(1/52,1000)
 #----
 R_adverse_IXCHIQ <- rbeta(1000,60.27875,3112.287)
 R_adverse_Vim <- rbeta(1000,10.81465, 405.1335)
-U_S_draws <- rbeta(1000,3.215,0.687)
+U_S_draws <- rbeta(1000,11.75982,2.511806)
 #U_V_draws <- rbeta(1000,60.77709,4774.314)
 #U_VIM_draws <- rbeta(1000,53.87676,3115.344)
-U_E_draws <- rbeta(1000,4.269,1.830)
-U_I_draws <- rbeta(1000,138.2644, 70.59423)
+U_E_draws <- rbeta(1000,17.63476,7.557754)
+U_I_draws <- rbeta(1000,20.11337, 10.26937)
 U_V_draws <- R_adverse_IXCHIQ * U_I_draws * cyclelength_draws
 U_VIM_draws <- R_adverse_Vim * U_I_draws * cyclelength_draws
-U_R_draws <- rbeta(1000,3.325, 0.750)
+U_R_draws <- rbeta(1000,11.68967, 2.635905)
 U_C_draws <- rbeta(1000,5.088638,5.212248)
 U_D_draws <- rep(0,1000)
 C_S_draws <- rep(0,1000)
