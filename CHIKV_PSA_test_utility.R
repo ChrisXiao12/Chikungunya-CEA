@@ -43,8 +43,8 @@ U_E_draws_raw <- rbeta(1000,17.63476,7.557754)
 U_I_draws_raw <- rbeta(1000,20.11337, 10.26937)
 U_E_draws <- pmin(U_E_draws_raw, U_S_draws)
 U_I_draws <- pmin(U_I_draws_raw, U_S_draws)
-U_V_draws <- R_adverse_IXCHIQ * U_I_draws * cyclelength_draws
-U_VIM_draws <- R_adverse_Vim * U_I_draws * cyclelength_draws
+U_V_draws <- R_adverse_IXCHIQ * U_S_draws *cyclelength_draws - R_adverse_IXCHIQ * U_I_draws * cyclelength_draws
+U_VIM_draws <- R_adverse_Vim * U_S_draws * cyclelength_draws - R_adverse_Vim * U_I_draws * cyclelength_draws
 U_R_draws <- rbeta(1000,11.68967, 2.635905)
 U_C_draws <- rbeta(1000,5.088638,5.212248)
 U_D_draws <- rep(0,1000)
@@ -215,7 +215,7 @@ run_SVEIRD4 <- function(params) {
   utility_trace_v <- apply(trace_v[,1:7], 1, function(row) row * utility_vector)
   utility_trace_v <- t(utility_trace_v)
   for(i in 1:nrow(utility_trace_v)) {
-    utility_trace_v[i,3] <- utility_trace_v[i,3] - trace_v$SV[i] * U_V * cycle_length
+    utility_trace_v[i,3] <- utility_trace_v[i,3] - trace_v$SV[i] * U_V
   }
   utility_trace_nv <- trace_nv[,1:7]
   utility_trace_nv <- apply(trace_nv[,1:7], 1, function(row) row * utility_vector)
@@ -330,69 +330,20 @@ nmb150kv <- resultsdf$v_eff_d * 150000 - resultsdf$v_cost_d
 nmb150knv <- resultsdf$nv_eff_d * 150000 - resultsdf$nv_cost_d
 nmb150kVIM <- Vimresultsdf$v_eff_d * 150000 - Vimresultsdf$v_cost_d
 #----
-wtp_values <- c(1000, 2500, 5000, 6808, 10000, 15000, 25000, 50000, 100000, 150000)
-nmb_list <- list(
-  IXCHIQ = list(
-    nmb1k = nmb1kv,
-    nmb2_5k = nmb2500v,
-    nmb5k = nmb5kv,
-    nmb6_8k = nmb6808v,
-    nmb10k = nmb10kv,
-    nmb15k = nmb15kv,
-    nmb25k = nmb25kv,
-    nmb50k = nmb50kv,
-    nmb100k = nmb100kv,
-    nmb150k = nmb150kv
-  ),
-  Vimkunya = list(
-    nmb1k = nmb1kVIM,
-    nmb2_5k = nmb2500VIM,
-    nmb5k = nmb5kVIM,
-    nmb6_8k = nmb6808VIM,
-    nmb10k = nmb10kVIM,
-    nmb15k = nmb15kVIM,
-    nmb25k = nmb25kVIM,
-    nmb50k = nmb50kVIM,
-    nmb100k = nmb100kVIM,
-    nmb150k = nmb150kVIM
-  ),
-  NoVax = list(
-    nmb1k = nmb1knv,
-    nmb2_5k = nmb2500nv,
-    nmb5k = nmb5knv,
-    nmb6_8k = nmb6808nv,
-    nmb10k = nmb10knv,
-    nmb15k = nmb15knv,
-    nmb25k = nmb25knv,
-    nmb50k = nmb50knv,
-    nmb100k = nmb100knv,
-    nmb150k = nmb150knv
-  )
-)
-ceac_df <- data.frame()
+wtp_values <- seq(1000,150000, by = 1000)
+ceac_df <- data.frame(WTP = wtp_values, NoVax = NA, IXCHIQ = NA, Vimkunya = NA)
 
 for (i in seq_along(wtp_values)) {
-  wtp_label <- names(nmb_list$IXCHIQ)[i]
-
-  df <- data.frame(
-    IXCHIQ = nmb_list$IXCHIQ[[wtp_label]],
-    Vimkunya = nmb_list$Vimkunya[[wtp_label]],
-    NoVax = nmb_list$NoVax[[wtp_label]]
-  )
-
-  winner <- apply(df, 1, function(x) names(x)[which.max(x)])
-  props <- prop.table(table(winner))
-
-  ceac_row <- data.frame(
-    WTP = wtp_values[i],
-    IXCHIQ = props["IXCHIQ"] %||% 0,
-    Vimkunya = props["Vimkunya"] %||% 0,
-    NoVax = props["NoVax"] %||% 0
-  )
-
-  ceac_df <- rbind(ceac_df, ceac_row)
+  wtp <- wtp_values[i]
+  nmbNoVax <- resultsdf$nv_eff_d * wtp - resultsdf$nv_cost_d
+  nmbIXCHIQ <- resultsdf$v_eff_d * wtp - resultsdf$v_cost_d
+  nmbVIM <- Vimresultsdf$v_eff_d * wtp - Vimresultsdf$v_cost_d
+  nmbMatrix <- cbind(NoVax = nmbNoVax, IXCHIQ = nmbIXCHIQ, Vimkunya = nmbVIM)
+  best_strategy <- apply(nmbMatrix, 1, function(x) names(which.max(x)))
+  ceac_df$NoVax[i] <- mean(best_strategy == "NoVax")
+  ceac_df$IXCHIQ[i] <- mean(best_strategy == "IXCHIQ")
+  ceac_df$Vimkunya[i] <- mean(best_strategy == "Vimkunya")
 }
-
 #----
 #plots
 ceac_renamed <- ceac_df %>%
