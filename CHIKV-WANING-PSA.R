@@ -337,7 +337,7 @@ ggplot(ceac_long, aes(x = WTP, y = Probability, color = Strategy, fill = Strateg
   ) +
   theme_minimal(base_size = 13) +
   theme(
-    legend.position = c(0.75, 0.9),
+    legend.position = c(0.75, 0.75),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     axis.line.x = element_line(color = "black", size = 1),
