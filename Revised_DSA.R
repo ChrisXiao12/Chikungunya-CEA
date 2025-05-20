@@ -4,25 +4,25 @@ df_IXCHIQ <- data.frame(
     "pbeta", "plambda", "pgamma", "pdelta", "pphi", "ppsi", "pmu", "pkappa", "pomega",
     "discount", "popsize", "fracsusceptible", "fracinfected", "cycle_length",
     "U_S", "U_V", "U_E", "U_I", "U_R", "U_C", "U_D",
-    "C_S", "C_V", "C_E", "C_I", "C_R", "C_C", "C_D"
+    "C_S", "C_V", "C_E", "C_I", "C_R", "C_C", "C_D", "ptheta"
   ),
   base_case = c(
-    0.939189937, 0.753403036, 0.56112007, 0.001, 0.968, 0.010445067, 6.95098e-06,
+    0.939189937, 0.753403036, 0.56112007, 0.001, 0.991, 0.010445067, 6.95098e-06,
     0.018995353, 0.521, 0.03, 1000, 0.9980005, 0.0019995, 0.019230769,
-    0.824, 0.00024, 0.700, 0.662, 0.816, 0.494, 0,
-    0, 313.89, 0, 235.44, 0, 685.64, 0
+    0.824, 0.00024, 0.700, 0.662, 0.824, 0.494, 0,
+    0, 28.89, 0, 235.44, 0, 685.64, 0, 0.000406
   ),
   LB = c(
-    0.813626024, 0.441964854, 0.503414696, 0.00075, 0.943, 0.007844073, 5.21324e-06,
+    0.813626024, 0.441964854, 0.503414696, 0.00075, 0.975, 0.007844073, 5.21324e-06,
     0.009543213, 0.445, 0.03, 1000, 0.9985, 0.0015, 0,
-    0.618, 0.00018, 0.525, 0.496, 0.612, 0.176, 0,
-    0, 2.09, 0, 41.75, 0, 514.23, 0
+    0.618, 0.00018, 0.525, 0.496, 0.618, 0.176, 0,
+    0, 22.09, 0, 41.75, 0, 514.23, 0, 0.000305
   ),
   UB = c(
-    0.985004423, 0.999088118, 0.632120559, 0.00125, 0.985, 0.013039243, 8.68871e-06,
+    0.985004423, 0.999088118, 0.632120559, 0.00125, 0.998, 0.013039243, 8.68871e-06,
     0.055910442, 0.597, 0.03, 1000, 0.9975, 0.0025, 0,
     1.000, 0.00030, 0.876, 0.827, 1.000, 0.759, 0,
-    0, 532.89, 0, 888.37, 0, 857.05, 0
+    0, 36.42, 0, 888.37, 0, 857.05, 0, 0.000508
   )
 )
 
@@ -31,35 +31,35 @@ df_VIMKUNYA <- data.frame(
     "pbeta", "plambda", "pgamma", "pdelta", "pphi", "ppsi", "pmu", "pkappa", "pomega",
     "discount", "popsize", "fracsusceptible", "fracinfected", "cycle_length",
     "U_S", "U_V", "U_E", "U_I", "U_R", "U_C", "U_D",
-    "C_S", "C_V", "C_E", "C_I", "C_R", "C_C", "C_D"
+    "C_S", "C_V", "C_E", "C_I", "C_R", "C_C", "C_D", "ptheta"
   ),
   base_case = c(
-    0.939189937, 0.753403036, 0.56112007, 0.001, 0.855, 0.010445067, 6.95098e-06,
+    0.939189937, 0.753403036, 0.56112007, 0.001, 0.978, 0.010445067, 6.95098e-06,
     0.018995353, 0.521, 0.03, 1000, 0.9980005, 0.0019995, 0.019230769,
-    0.824, 0.000331, 0.700, 0.662, 0.816, 0.494, 0,
-    0, 313.89, 0, 235.44, 0, 685.64, 0
+    0.824, 0.000331, 0.700, 0.662, 0.824, 0.494, 0,
+    0, 28.89, 0, 235.44, 0, 685.64, 0, 0.005453
   ),
   LB = c(
-    0.813626024, 0.441964854, 0.503414696, 0.00075, 0.84, 0.007844073, 5.21324e-06,
+    0.813626024, 0.441964854, 0.503414696, 0.00075, 0.972, 0.007844073, 5.21324e-06,
     0.009543213, 0.445, 0.03, 1000, 0.9985, 0.0015, 0,
-    0.618, 0.000248, 0.525, 0.496, 0.612, 0.176, 0,
-    0, 2.09, 0, 41.75, 0, 514.23, 0
+    0.618, 0.000248, 0.525, 0.496, 0.618, 0.176, 0,
+    0, 22.09, 0, 41.75, 0, 514.23, 0, 0.00409
   ),
   UB = c(
-    0.985004423, 0.999088118, 0.632120559, 0.00125, 0.869, 0.013039243, 8.68871e-06,
+    0.985004423, 0.999088118, 0.632120559, 0.00125, 0.983, 0.013039243, 8.68871e-06,
     0.055910442, 0.597, 0.03, 1000, 0.9975, 0.0025, 0,
     1.000, 0.000414, 0.876, 0.827, 1.000, 0.759, 0,
-    0, 532.89, 0, 888.37, 0, 857.05, 0
+    0, 36.42, 0, 888.37, 0, 857.05, 0, 0.006817
   )
 )
 
 #----
 
-wtp <- 6808
+wtp <- 7000
 param_df <- df_VIMKUNYA
 base_params <- setNames(param_df$base_case, param_df$variable)
 get_inmb <- function(params) {
-  res <- run_SVEIRD4(params)
+  res <- run_SVEIRD5(params)
   v_nmb <- res["v_eff_d"] * wtp - res["v_cost_d"]
   nv_nmb <- res["nv_eff_d"] * wtp - res["nv_cost_d"]
   return(v_nmb - nv_nmb)
@@ -87,11 +87,11 @@ DSA_VIMKUNYA_wide <- DSA_results_VIMKUNYA %>% pivot_wider(names_from = Bound, va
 DSA_IXCHIQ_wide <- DSA_IXCHIQ_wide %>% mutate(range = abs(`Upper Bound` - `Lower Bound`))
 DSA_VIMKUNYA_wide <- DSA_VIMKUNYA_wide %>% mutate(range = abs(`Upper Bound` - `Lower Bound`))
 DSA_IXCHIQ_wide <- DSA_IXCHIQ_wide %>% arrange(desc(range))
-DSA_IXCHIQ_wide <- DSA_IXCHIQ_wide[1:14,]
+DSA_IXCHIQ_wide <- DSA_IXCHIQ_wide[1:12,]
 DSA_VIMKUNYA_wide <- DSA_VIMKUNYA_wide %>% arrange(desc(range))
-DSA_VIMKUNYA_wide <- DSA_VIMKUNYA_wide[1:14,]
+DSA_VIMKUNYA_wide <- DSA_VIMKUNYA_wide[1:12,]
 #----
-BaseI <- 7199323.73
+BaseI <- 7407329.69
 sorted_I <- DSA_IXCHIQ_wide %>%
   arrange(desc(range)) %>%
   pull(Parameter)
@@ -104,7 +104,7 @@ plot_data <- DSA_IXCHIQ_wide %>%
     xmax = pmax(Value, BaseI),
     Parameter = factor(Parameter, levels = rev(sorted_I))
   )
-BaseV <- 6216095.99
+BaseV <- 6961879.60
 sorted_V <- DSA_VIMKUNYA_wide %>%
   arrange(desc(range)) %>%
   pull(Parameter)
