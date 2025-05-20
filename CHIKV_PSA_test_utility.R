@@ -220,7 +220,7 @@ run_SVEIRD4 <- function(params) {
   utility_trace_nv <- trace_nv[,1:7]
   utility_trace_nv <- apply(trace_nv[,1:7], 1, function(row) row * utility_vector)
   utility_trace_nv <- t(utility_trace_nv)
-  trace_v$V <- trace_v$SV  # Replace V with SV in the entire trace
+  trace_v$V <- trace_v$SV *  # Replace V with SV in the entire trace
   cost_trace_v <- trace_v[,1:7]
   cost_trace_v <- apply(cost_trace_v, 1, function(row) row * cost_vector)
   cost_trace_v <- t(cost_trace_v)
