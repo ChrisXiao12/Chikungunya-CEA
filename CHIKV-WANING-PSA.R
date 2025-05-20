@@ -1,9 +1,9 @@
 #----
 #this script attempts to model the impact of vaccine waning
-#The assumptions I make are as follows
 #V no longer can go to E, everyone in V stays in V until their immunity wanes at rate theta
 #Theta is derived from extrapolating a linear decline of 1 month sero response to 0
-#S is vaccinated at rate psi mutliplied by 1 mo VE to simulate the fact that not all people respond
+#Individuasl go to VE from V representing waning or from S representing those in which the vaccine did not work
+#These people progress at rate (1-phi)*psi*S
 #----
 #packages
 library(tidyverse)
@@ -131,7 +131,7 @@ Vimkunyaparametersdf$U_V <- U_VIM_draws
 Vimkunyaparametersdf$C_V <- C_Vim_draws
 Vimkunyaparametersdf$ptheta <- Theta_V_draws
 #----
-run_SVEIRD5 <- function(params) {
+run_SVEIRD5 <- function(params, return_trace = FALSE) {
   pbeta <- params[["pbeta"]]
   plambda <- params[["plambda"]]
   pgamma <- params[["pgamma"]]
@@ -163,21 +163,42 @@ run_SVEIRD5 <- function(params) {
   C_R <- params[["C_R"]]
   C_C <- params[["C_C"]]
   C_D <- 0
-  names <- c("S", "E", "V", "I", "R", "C", "D", "N", "Check",
-             "SV", "SE", "SD", "VS", "VD", "EI", "ED", "IR", "IC", "ID", "RD", "CR", "CD")
+  names <- c("S", "E", "V", "VE", "I", "R", "C", "D", "N", "Check",
+             "SV", "SE", "SVE", "SD", "VVE", "VD", "VEE", "VED", "EI", "ED", "IR", "IC", "ID", "RD", "CR", "CD")
   trace_v <- data.frame(matrix(0, nrow = 520, ncol = length(names)))
   colnames(trace_v) <- names
 
   #initialize trace
-  trace_v[1,] <- list(fracsusceptible * popsize, 0, 0, fracinfected * popsize, 0, 0, 0, popsize, 1000, 0, 0, 0, 0,0,0,0,0,0,0,0,0,0)
+  trace_v <- data.frame(matrix(0, nrow = 520, ncol = length(names)))
+  colnames(trace_v) <- names
+
+  # Initialize with only S and I non-zero; all else 0
+  trace_v[1, ] <- list(
+    fracsusceptible * popsize,  # S
+    0,                          # E
+    0,                          # V
+    0,                          # VE
+    fracinfected * popsize,     # I
+    0,                          # R
+    0,                          # C
+    0,                          # D
+    popsize,                    # N
+    1000,                       # Check
+    0, 0, 0, 0,                 # SV, SE, SVE, SD
+    0, 0, 0, 0,                 # VVE, VD, VEE, VED
+    0, 0, 0, 0, 0, 0, 0         # EI, ED, IR, IC, ID, RD, CR, CD
+  )
   trace_nv <- trace_v
 
 
   for(i in 2:length(trace_v$S)){
     trace_v$SV[i] <- trace_v$S[i-1] * ppsi * pphi
+    trace_v$SVE[i] <- trace_v$S[i-1] * ppsi * (1-pphi)
     trace_v$SE[i] <- trace_v$S[i-1] * pbeta * trace_v$I[i-1] / trace_v$N[i-1]
     trace_v$SD[i] <- trace_v$S[i-1] * pmu
-    trace_v$VS[i] <- trace_v$V[i-1] * ptheta
+    trace_v$VVE[i] <- trace_v$V[i-1] * ptheta
+    trace_v$VED[i] <- trace_v$VE[i-1] * pmu
+    trace_v$VEE[i] <- trace_v$VE[i-1] * pbeta * trace_v$I[i-1] / trace_v$N[i-1]
     trace_v$VD[i] <- trace_v$V[i-1] * pmu
     trace_v$EI[i] <- trace_v$E[i-1] * plambda
     trace_v$ED[i] <- trace_v$E[i-1] * pmu
@@ -187,22 +208,26 @@ run_SVEIRD5 <- function(params) {
     trace_v$RD[i] <- trace_v$R[i-1] * pmu
     trace_v$CR[i] <- trace_v$C[i-1] * pkappa
     trace_v$CD[i] <- trace_v$C[i-1] * pmu
-    trace_v$S[i] <- trace_v$S[i-1] - trace_v$SV[i] - trace_v$SE[i] - trace_v$SD[i] + trace_v$VS[i]
-    trace_v$E[i] <- trace_v$E[i-1] - trace_v$EI[i] - trace_v$ED[i] + trace_v$SE[i]
-    trace_v$V[i] <- trace_v$V[i-1] - trace_v$VS[i] - trace_v$VD[i] + trace_v$SV[i]
+    trace_v$S[i] <- trace_v$S[i-1] - trace_v$SV[i] - trace_v$SE[i] - trace_v$SD[i] -trace_v$SVE[i]
+    trace_v$E[i] <- trace_v$E[i-1] - trace_v$EI[i] - trace_v$ED[i] + trace_v$SE[i] + trace_v$VEE[i]
+    trace_v$V[i] <- trace_v$V[i-1] - trace_v$VVE[i] - trace_v$VD[i] + trace_v$SV[i]
+    trace_v$VE[i] <- trace_v$VE[i-1] + trace_v$VVE[i] + trace_v$SVE[i] - trace_v$VED[i] - trace_v$VEE[i]
     trace_v$I[i] <- trace_v$I[i-1] - trace_v$IR[i] - trace_v$IC[i] - trace_v$ID[i] + trace_v$EI[i]
     trace_v$R[i] <- trace_v$R[i-1] - trace_v$RD[i] + trace_v$IR[i] + trace_v$CR[i]
     trace_v$C[i] <- trace_v$C[i-1] - trace_v$CD[i] - trace_v$CR[i] + trace_v$IC[i]
-    trace_v$D[i] <- trace_v$D[i-1] + trace_v$CD[i] + trace_v$SD[i] + trace_v$VD[i] + trace_v$RD[i] + trace_v$ID[i] + trace_v$ED[i]
-    trace_v$N[i] <- trace_v$S[i] + trace_v$E[i] + trace_v$V[i] + trace_v$I[i] + trace_v$R[i] + trace_v$C[i]
-    trace_v$Check[i] <- trace_v$S[i] + trace_v$V[i] + trace_v$I[i] + trace_v$R[i] + trace_v$C[i] + trace_v$E[i] + trace_v$D[i]
+    trace_v$D[i] <- trace_v$D[i-1] + trace_v$CD[i] + trace_v$SD[i] + trace_v$VD[i] + trace_v$RD[i] + trace_v$ID[i] + trace_v$ED[i] + trace_v$VED[i]
+    trace_v$N[i] <- trace_v$S[i] + trace_v$E[i] + trace_v$V[i] + trace_v$I[i] + trace_v$R[i] + trace_v$C[i] + trace_v$VE[i]
+    trace_v$Check[i] <- trace_v$S[i] + trace_v$V[i] + trace_v$I[i] + trace_v$R[i] + trace_v$C[i] + trace_v$E[i] + trace_v$D[i] + trace_v$VE[i]
   }
 
   for(i in 2:length(trace_nv$S)){
     trace_nv$SV[i] <- 0
+    trace_nv$SVE[i] <- 0
     trace_nv$SE[i] <- trace_nv$S[i-1] * pbeta * trace_nv$I[i-1] / trace_nv$N[i-1]
     trace_nv$SD[i] <- trace_nv$S[i-1] * pmu
-    trace_nv$VE[i] <- trace_nv$V[i-1] * (1 - pphi) * pbeta * trace_nv$I[i-1] / trace_nv$N[i-1]
+    trace_nv$VVE[i] <- trace_nv$V[i-1] * ptheta
+    trace_nv$VED[i] <- trace_nv$VE[i-1] * pmu
+    trace_nv$VEE[i] <- trace_nv$VE[i-1] * pbeta * trace_nv$I[i-1] / trace_nv$N[i-1]
     trace_nv$VD[i] <- trace_nv$V[i-1] * pmu
     trace_nv$EI[i] <- trace_nv$E[i-1] * plambda
     trace_nv$ED[i] <- trace_nv$E[i-1] * pmu
@@ -212,41 +237,56 @@ run_SVEIRD5 <- function(params) {
     trace_nv$RD[i] <- trace_nv$R[i-1] * pmu
     trace_nv$CR[i] <- trace_nv$C[i-1] * pkappa
     trace_nv$CD[i] <- trace_nv$C[i-1] * pmu
-    trace_nv$S[i] <- trace_nv$S[i-1] - trace_nv$SV[i] - trace_nv$SE[i] - trace_nv$SD[i]
-    trace_nv$E[i] <- trace_nv$E[i-1] - trace_nv$EI[i] - trace_nv$ED[i] + trace_nv$VE[i] + trace_nv$SE[i]
-    trace_nv$V[i] <- trace_nv$V[i-1] - trace_nv$VE[i] - trace_nv$VD[i] + trace_nv$SV[i]
+    trace_nv$S[i] <- trace_nv$S[i-1] - trace_nv$SV[i] - trace_nv$SE[i] - trace_nv$SD[i] - trace_nv$SVE[i]
+    trace_nv$E[i] <- trace_nv$E[i-1] - trace_nv$EI[i] - trace_nv$ED[i] + trace_nv$SE[i] + trace_nv$VEE[i]
+    trace_nv$V[i] <- trace_nv$V[i-1] - trace_nv$VVE[i] - trace_nv$VD[i] + trace_nv$SV[i]
+    trace_nv$VE[i] <- trace_nv$VE[i-1] + trace_nv$VVE[i] + trace_nv$SVE[i] - trace_nv$VED[i] - trace_nv$VEE[i]
     trace_nv$I[i] <- trace_nv$I[i-1] - trace_nv$IR[i] - trace_nv$IC[i] - trace_nv$ID[i] + trace_nv$EI[i]
     trace_nv$R[i] <- trace_nv$R[i-1] - trace_nv$RD[i] + trace_nv$IR[i] + trace_nv$CR[i]
     trace_nv$C[i] <- trace_nv$C[i-1] - trace_nv$CD[i] - trace_nv$CR[i] + trace_nv$IC[i]
-    trace_nv$D[i] <- trace_nv$D[i-1] + trace_nv$CD[i] + trace_nv$SD[i] + trace_nv$VD[i] + trace_nv$RD[i] + trace_nv$ID[i] + trace_nv$ED[i]
+    trace_nv$D[i] <- trace_nv$D[i-1] + trace_nv$CD[i] + trace_nv$SD[i] + trace_nv$VD[i] + trace_nv$RD[i] + trace_nv$ID[i] + trace_nv$ED[i] + trace_nv$VED[i]
     trace_nv$N[i] <- trace_nv$S[i] + trace_nv$E[i] + trace_nv$V[i] + trace_nv$I[i] + trace_nv$R[i] + trace_nv$C[i]
-    trace_nv$Check[i] <- trace_nv$S[i] + trace_nv$V[i] + trace_nv$I[i] + trace_nv$R[i] + trace_nv$C[i] + trace_nv$E[i] + trace_nv$D[i]
+    trace_nv$Check[i] <- trace_nv$S[i] + trace_nv$V[i] + trace_nv$I[i] + trace_nv$R[i] + trace_nv$C[i] + trace_nv$E[i] + trace_nv$D[i] + trace_nv$VE[i]
   }
 
-  utility_vector <- c(U_S, U_E, U_S, U_I, U_R, U_C, U_D)
-  cost_vector <- c(C_S, C_E, C_V, C_I, C_R, C_C, C_D)
-  utility_trace_v <- trace_v[,1:7]
-  utility_trace_v <- apply(trace_v[,1:7], 1, function(row) row * utility_vector)
+  utility_vector <- c(U_S, U_E, U_S, U_S, U_I, U_R, U_C, U_D)
+  cost_vector <- c(C_S, C_E, C_V, C_V, C_I, C_R, C_C, C_D)
+  utility_trace_v <- trace_v[,1:8]
+  utility_trace_v <- apply(trace_v[,1:8], 1, function(row) row * utility_vector)
   utility_trace_v <- t(utility_trace_v)
   for(i in 1:nrow(utility_trace_v)) {
-    utility_trace_v[i,3] <- utility_trace_v[i,3] - trace_v$SV[i] * 1/pphi * U_V
+    utility_trace_v[i,3] <- utility_trace_v[i,3] - trace_v$SV[i] * U_V
+    utility_trace_v[i,4] <- utility_trace_v[i,4] - trace_v$SVE[i] * U_V
   }
-  utility_trace_nv <- trace_nv[,1:7]
-  utility_trace_nv <- apply(trace_nv[,1:7], 1, function(row) row * utility_vector)
+  utility_trace_nv <- trace_nv[,1:8]
+  utility_trace_nv <- apply(trace_nv[,1:8], 1, function(row) row * utility_vector)
   utility_trace_nv <- t(utility_trace_nv)
-  trace_v$V <- trace_v$SV * 1/pphi  # Replace V with SV in the entire trace and account for people that paid for vaccine but did not produce antibodies
-  cost_trace_v <- trace_v[,1:7]
+  cost_trace_v <- trace_v[,1:8]
   cost_trace_v <- apply(cost_trace_v, 1, function(row) row * cost_vector)
   cost_trace_v <- t(cost_trace_v)
+  for(i in 1:nrow(cost_trace_v)) {
+    cost_trace_v[i,3] <- trace_v$SV[i] * C_V
+    cost_trace_v[i,4] <- trace_v$SVE[i] * C_V
+  }
   trace_nv$V <- trace_nv$SV
-  cost_trace_nv <- trace_nv[,1:7]
-  cost_trace_nv <- apply(trace_nv[,1:7], 1, function(row) row * cost_vector)
+  cost_trace_nv <- trace_nv[,1:8]
+  cost_trace_nv <- apply(trace_nv[,1:8], 1, function(row) row * cost_vector)
   cost_trace_nv <- t(cost_trace_nv)
   discount_factors <- 1 / (1 + discount) ^ ((0:(520 - 1)) / 52)
   v_eff_d <- sum(rowSums(utility_trace_v) * discount_factors)
   nv_eff_d <- sum(rowSums(utility_trace_nv) * discount_factors)
   v_cost_d <- sum(rowSums(cost_trace_v) * discount_factors)
   nv_cost_d <- sum(rowSums(cost_trace_nv) * discount_factors)
+  if (return_trace) {
+    return(list(
+      v_trace = trace_v,
+      nv_trace = trace_nv,
+      v_cost_d = v_cost_d,
+      nv_cost_d = nv_cost_d,
+      v_eff_d = v_eff_d,
+      nv_eff_d = nv_eff_d
+    ))
+  }
   return(c(v_cost_d = v_cost_d, nv_cost_d = nv_cost_d, v_eff_d = v_eff_d, nv_eff_d = nv_eff_d))
 }
 #----
