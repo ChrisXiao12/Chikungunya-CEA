@@ -356,6 +356,17 @@ for (i in seq_along(wtp_values)) {
   ceac_df$IXCHIQ[i] <- mean(best_strategy == "IXCHIQ")
   ceac_df$Vimkunya[i] <- mean(best_strategy == "Vimkunya")
 }
+ceac2_df <- data.frame(WTP = wtp_values, NoVax = NA, recombinant = NA)
+for (i in seq_along(wtp_values)) {
+  wtp <- wtp_values[i]
+  nmbNoVax <- resultsdf$nv_eff_d * wtp - resultsdf$nv_cost_d
+  nmbVIM <- Vimresultsdf$v_eff_d * wtp - Vimresultsdf$v_cost_d
+  nmbMatrix <- cbind(NoVax = nmbNoVax, Vimkunya = nmbVIM)
+  nmb_list[[i]] <- nmbMatrix
+  best_strategy <- apply(nmbMatrix, 1, function(x) names(which.max(x)))
+  ceac2_df$NoVax[i] <- mean(best_strategy == "NoVax")
+  ceac2_df$recombinant[i] <- mean(best_strategy == "Vimkunya")
+}
 #----
 #EVPI
 EVPI <- numeric(length(wtp_values))
