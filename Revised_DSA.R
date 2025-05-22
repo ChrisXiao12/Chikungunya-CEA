@@ -120,19 +120,17 @@ plot_data <- DSA_VIMKUNYA_wide %>%
 #----
 param_labels <- c(
   pkappa = "Chronic Disease Recovery Probability",
-  U_S = "Utility Susceptible",
-  U_R = "Utility Recovered",
   U_C = "Utility Chronic Disease",
   C_C = "Cost Chronic Disease",
   C_I = "Cost Infection",
-  C_V = "Cost Vaccination",
   ppsi = "Vaccination Rate",
   pomega = "Probability of Chronic Disease",
-  pphi = "Vaccine Efficacy",
   plambda = "Infectious Rate",
   pbeta = "Transmission Rate",
   pgamma = "Probability Recover Infectious",
-  fracinfected = "Initial Infection Proportion"
+  fracinfected = "Initial Infection Proportion",
+  U_I = "Utility Infectious CHIKV",
+  U_E = "Utility Exposed"
 )
 
 ggplot(plot_data) +
