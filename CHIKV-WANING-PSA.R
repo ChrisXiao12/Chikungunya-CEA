@@ -14,6 +14,73 @@ library(parallel)
 library(dplyr)
 library(tibble)
 #----
+#basecase parameter dataframes
+liveattenuated_base_case <- list(
+  pbeta = 0.939189937,
+  plambda = 0.753403036,
+  pgamma = 0.56112007,
+  pdelta = 0.001,
+  pphi = 0.991,
+  ppsi = 0.010445067,
+  pmu = 6.95098e-06,
+  pkappa = 0.018995353,
+  pomega = 0.521,
+  discount = 0.03,
+  ptheta = 0.000406315,
+  popsize = 1000,
+  fracsusceptible = 0.9980005,
+  fracinfected = 0.0019995,
+  cycle_length = 0.019230769,
+  U_S = 0.824,
+  U_E = 0.700,
+  U_V = 0.00006,
+  U_I = 0.662,
+  U_R = 0.824,
+  U_C = 0.494,
+  U_D = 0.000,
+  C_S = 0.00,
+  C_V = 28.89,
+  C_E = 0.00,
+  C_I = 235.44,
+  C_R = 0.00,
+  C_C = 685.64,
+  C_D = 0.00,
+  C_VIM = 28.89
+)
+
+recombinant_base_case <- list(
+  pbeta = 0.939189937,
+  plambda = 0.753403036,
+  pgamma = 0.56112007,
+  pdelta = 0.001,
+  pphi = 0.978,
+  ppsi = 0.010445067,
+  pmu = 0.00000695098,
+  pkappa = 0.018995353,
+  pomega = 0.521,
+  discount = 0.03,
+  ptheta = 0.005453202,
+  popsize = 1000,
+  fracsusceptible = 0.9980005,
+  fracinfected = 0.0019995,
+  cycle_length = 0.019230769,
+  U_S = 0.824,
+  U_E = 0.700,
+  U_V = 0.000081,
+  U_I = 0.662,
+  U_R = 0.824,
+  U_C = 0.494,
+  U_D = 0.000,
+  C_S = 0.00,
+  C_V = 28.89,
+  C_E = 0.00,
+  C_I = 235.44,
+  C_R = 0.00,
+  C_C = 685.64,
+  C_D = 0.00
+)
+#----
+#draws for PSA
 R0_draws <- rgamma(1000,shape = 54.8258, scale = 0.0620146)
 Lambda_draws <- rgamma(1000,shape = 0.7314914, scale = 1.913898)
 Gamma_draws <- rgamma(1000,shape = 115.7945, scale = 0.007111992)
@@ -41,17 +108,14 @@ pop_draws <- rep(1000,1000)
 fracinfected_draws <- rbeta(1000, 61.03465,30532.77)
 fracsusceptible_draws <- 1 - fracinfected_draws
 cyclelength_draws <- rep(1/52,1000)
-#----
 R_adverse_IXCHIQ <- rbeta(1000,60.27875,3112.287)
 R_adverse_Vim <- rbeta(1000,10.81465, 405.1335)
-U_S_draws <- rbeta(1000,11.75982,2.511806)
+U_S_draws <- rbeta(1000,28691.07,6128.19)
 U_R_draws <- U_S_draws
 Theta_I_draws <- rbeta(1000,61.44024,151269.2)
 Theta_V_draws <- rbeta(1000,61.10256,11144.21)
-#U_V_draws <- rbeta(1000,60.77709,4774.314)
-#U_VIM_draws <- rbeta(1000,53.87676,3115.344)
-U_E_draws_raw <- rbeta(1000,17.63476,7.557754)
-U_I_draws_raw <- rbeta(1000,20.11337, 10.26937)
+U_E_draws_raw <- rbeta(1000,23.90391,10.24453)
+U_I_draws_raw <- rbeta(1000,138.2644, 70.59423)
 U_E_draws <- pmin(U_E_draws_raw, U_S_draws)
 U_I_draws <- pmin(U_I_draws_raw, U_S_draws)
 U_V_draws <- R_adverse_IXCHIQ * U_S_draws *cyclelength_draws - R_adverse_IXCHIQ * U_I_draws * cyclelength_draws
@@ -63,10 +127,8 @@ Vax_Dose_draws_I <- rgamma(1000,shape = 104.7666, scale = 0.2243081)
 Vax_Dose_draws_Vim <- rgamma(1000,shape = 104.7666, scale = 0.2243081)
 Admin_draws <- rgamma(1000,shape = 61.4656, scale = 0.04522855)
 Waste_draws <- rpert(1000, min = 0.05, mode = 0.1, max = 0.15)
-#----
 C_V_draws <- Vax_Dose_draws_I / (1 - Waste_draws) + Admin_draws
 C_Vim_draws <- Vax_Dose_draws_Vim / (1 - Waste_draws) + Admin_draws
-#----
 D_hosp_draws <- rgamma(1000, shape = 61.57906, scale = 0.1761963)
 Cost_hosp_draws <- rgamma(1000, shape = 61.4656, scale = 14.09113)
 P_hosp_draws <- rbeta(1000, 60.43122,3291.949)
@@ -83,14 +145,11 @@ Chronic_absenteeism_freq <- rbeta(1000, 56.03872, 8.373601)
 Chronic_caregiving_days <- rgamma(1000, shape = 95.20305, scale = 0.1197441)
 Chronic_caregiving_freq <- rbeta(1000, 197.3991, 383.1864)
 Absenteeism_cost <- rgamma(1000, shape = 61.4656, scale = 0.4822209)
-#----
 TC_indirect_infectious <- Absenteeism_cost * ((Infectious_absenteeism_days * Infectious_absenteeism_freq) + (Infectious_caregiving_days * Infectious_caregiving_freq))
 TC_indirect_chronic <- Absenteeism_cost * ((Chronic_absenteeism_days * Chronic_absenteeism_freq) + (Chronic_caregiving_days * Chronic_caregiving_freq))
 C_E_draws <- rep(0,1000)
-#C_I_draws <- rgamma(1000,shape = 1.855343, scale = 126.8983)
 C_I_draws <- (Cost_hosp_draws / D_hosp_draws * 7 * P_hosp_draws) + (Infectious_direct * P_nhosp_draws) + TC_indirect_infectious
 C_R_draws <- rep(0,1000)
-#C_C_draws <- rgamma(1000, shape = 61.4656, scale = 11.15486)
 C_C_draws <- Chronic_direct + TC_indirect_chronic + 6 * Outpatient_visit
 C_D_draws <- rep(0,1000)
 #----
@@ -150,7 +209,7 @@ run_SVEIRD5 <- function(params, return_trace = FALSE) {
 
   U_S <- params[["U_S"]] * cycle_length
   U_E <- params[["U_E"]] * cycle_length
-  U_V <- params[["U_V"]]
+  U_V <- params[["U_V"]] #already adjusted
   U_I <- params[["U_I"]] * cycle_length
   U_R <- params[["U_R"]] * cycle_length
   U_C <- params[["U_C"]] * cycle_length
@@ -159,9 +218,9 @@ run_SVEIRD5 <- function(params, return_trace = FALSE) {
   C_S <- params[["C_S"]]
   C_E <- params[["C_E"]]
   C_V <- params[["C_V"]]
-  C_I <- params[["C_I"]]
+  C_I <- params[["C_I"]] #already adjusted in terms of week lengths
   C_R <- params[["C_R"]]
-  C_C <- params[["C_C"]]
+  C_C <- params[["C_C"]] * cycle_length #since cost was estimated in annual costs
   C_D <- 0
   names <- c("S", "E", "V", "VE", "I", "R", "C", "D", "N", "Check",
              "SV", "SE", "SVE", "SD", "VVE", "VD", "VEE", "VED", "EI", "ED", "IR", "IC", "ID", "RD", "CR", "CD")
@@ -290,6 +349,15 @@ run_SVEIRD5 <- function(params, return_trace = FALSE) {
   return(c(v_cost_d = v_cost_d, nv_cost_d = nv_cost_d, v_eff_d = v_eff_d, nv_eff_d = nv_eff_d))
 }
 #----
+base_case_results_live <- run_SVEIRD5(liveattenuated_base_case)
+base_case_results_recombinant <- run_SVEIRD5(recombinant_base_case)
+NMB_live <- base_case_results_live[3] * 7000 - base_case_results_live[1]
+NMB_novax <- base_case_results_live[4] * 7000 - base_case_results_live[2]
+NMB_recombo <- base_case_results_recombinant[3] * 7000 - base_case_results_recombinant[1]
+INMB_livevsnovax <- NMB_live - NMB_novax
+INMB_recombovsnovax <- NMB_recombo - NMB_novax
+INMB_livevsrecombo <- NMB_live - NMB_recombo
+#----
 #multicore processing
 num_cores <- detectCores() - 1
 cl <- makeCluster(num_cores)  # Create parallel cluster
@@ -356,29 +424,8 @@ for (i in seq_along(wtp_values)) {
   ceac_df$IXCHIQ[i] <- mean(best_strategy == "IXCHIQ")
   ceac_df$Vimkunya[i] <- mean(best_strategy == "Vimkunya")
 }
-ceac2_df <- data.frame(WTP = wtp_values, NoVax = NA, recombinant = NA)
-for (i in seq_along(wtp_values)) {
-  wtp <- wtp_values[i]
-  nmbNoVax <- resultsdf$nv_eff_d * wtp - resultsdf$nv_cost_d
-  nmbVIM <- Vimresultsdf$v_eff_d * wtp - Vimresultsdf$v_cost_d
-  nmbMatrix <- cbind(NoVax = nmbNoVax, Vimkunya = nmbVIM)
-  nmb_list[[i]] <- nmbMatrix
-  best_strategy <- apply(nmbMatrix, 1, function(x) names(which.max(x)))
-  ceac2_df$NoVax[i] <- mean(best_strategy == "NoVax")
-  ceac2_df$recombinant[i] <- mean(best_strategy == "Vimkunya")
-}
 #----
-#EVPI
-EVPI <- numeric(length(wtp_values))
-for (i in seq_along(wtp_values)) {
-  nmbMatrix <- nmb_list[[i]]
-  E_max_NMB <- mean(apply(nmbMatrix, 1, max))
-  max_E_NMB <- max(colMeans(nmbMatrix))
-  EVPI[i] <- E_max_NMB - max_E_NMB
-}
-EVPI_df <- data.frame(WTP = wtp_values, EV_PerfectInfo = EVPI)
-#----
-#plots
+#plots for the PSA
 ceac_renamed <- ceac_df %>%
   rename(`No Vaccination` = NoVax) %>% rename(`Vaccination with live-attenuated CHIKV vaccine` = IXCHIQ) %>% rename(`Vaccination with recombinant CHIKV vaccine` = Vimkunya)
 ceac_long <- pivot_longer(ceac_renamed, cols = -WTP, names_to = "Strategy", values_to = "Probability")
@@ -412,75 +459,6 @@ ggplot(ceac_long, aes(x = WTP, y = Probability, color = Strategy, fill = Strateg
     axis.ticks.y = element_line(color = "black")
   )
 #----
-#overlayed PSA and EVPI
-ceac_df$EVPI_scaled <- EVPI_df$EV_PerfectInfo / 50000
-ggplot(ceac_long, aes(x = WTP, y = Probability, color = Strategy)) +
-  geom_line(size = 1.2) +
-  geom_ribbon(aes(ymin = Lower, ymax = Upper, fill = Strategy),
-              alpha = 0.3, color = NA) +
-  geom_line(data = ceac_df,
-            aes(x = WTP, y = EVPI_scaled, color = "EVPI"),
-            size = 1.2) +
-  geom_segment(aes(x = min(ceac_df$WTP), xend = max(ceac_df$WTP),
-                   y = 0.5, yend = 0.5),
-               linetype = "dashed", color = "grey", size = 1) +
-  geom_segment(aes(x = 7000, xend = 7000,
-                   y = 0, yend = 1),
-               linetype = "dashed", color = "grey", size = 1) +
-  scale_y_continuous(
-    name = "Probability of being cost-effective",
-    limits = c(0, 1),
-    expand = c(0, 0),
-    sec.axis = sec_axis(trans = function(x) { x * 50000 }, name = "EVPI (USD)", labels = scales::comma)
-  ) +
-  scale_x_continuous(
-    limits = c(0, max(ceac_df$WTP)),
-    expand = c(0, 0),
-    labels = scales::dollar_format()
-  ) +
-  scale_color_manual(
-    values = c(
-      "EVPI" = "black",
-      "No Vaccination" = "red",
-      "Vaccination with live-attenuated CHIKV vaccine" = "blue",
-      "Vaccination with recombinant CHIKV vaccine" = "green"
-    ),
-    breaks = c(
-      "No Vaccination",
-      "Vaccination with live-attenuated CHIKV vaccine",
-      "Vaccination with recombinant CHIKV vaccine",
-      "EVPI"
-    )
-  ) +
-  scale_fill_manual(
-    values = c(
-      "No Vaccination" = "red",
-      "Vaccination with live-attenuated CHIKV vaccine" = "blue",
-      "Vaccination with recombinant CHIKV vaccine" = "green"
-    ),
-    guide = "none"
-  ) +
-  labs(
-    x = "Willingness-to-Pay Threshold",
-    color = "Legend",
-    fill = "Strategy"
-  ) +
-  theme_minimal(base_size = 13) +
-  theme(
-    legend.position = c(0.5, 0.75),
-    axis.title.y.right = element_text(color = "black"),
-    axis.text.y.right = element_text(color = "black"),
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    axis.ticks.x = element_line(color = "grey"),
-    axis.ticks.y = element_line(color = "grey"),
-    axis.line.x = element_line(color = "grey", size = 1),
-    axis.line.y = element_line(color = "grey", size = 1)
-  )
-
-
-
-#----
 #scatter
 resultsdf <- resultsdf %>% mutate(IC = v_cost_d - nv_cost_d)
 resultsdf <- resultsdf %>% mutate(IE = v_eff_d - nv_eff_d)
@@ -500,4 +478,215 @@ ggplot(resultsdf, aes(x = IE, y = IC)) +
     axis.text = element_text(size = 10)
   ) +
   scale_y_continuous(labels = scales::comma)
+#----
+#conduct one-way deterministic sensitivty analysis and generate tornado plots
+#create dataframes for IXCHIQ (live-attenuated) and VIMKUNYA (recombinant) containing
+#base-case values, LB, and UB
+df_IXCHIQ <- data.frame(
+  variable = c(
+    "pbeta", "plambda", "pgamma", "pdelta", "pphi", "ppsi", "pmu", "pkappa", "pomega",
+    "discount", "popsize", "fracsusceptible", "fracinfected", "cycle_length",
+    "U_S", "U_V", "U_E", "U_I", "U_R", "U_C", "U_D",
+    "C_S", "C_V", "C_E", "C_I", "C_R", "C_C", "C_D", "ptheta"
+  ),
+  base_case = c(
+    0.939189937, 0.753403036, 0.56112007, 0.001, 0.991, 0.010445067, 6.95098e-06,
+    0.018995353, 0.521, 0.03, 1000, 0.9980005, 0.0019995, 0.019230769,
+    0.824, 0.00024, 0.700, 0.662, 0.824, 0.494, 0,
+    0, 28.89, 0, 235.44, 0, 685.64, 0, 0.000406
+  ),
+  LB = c(
+    0.813626024, 0.441964854, 0.503414696, 0.00075, 0.975, 0.007844073, 5.21324e-06,
+    0.009543213, 0.445, 0.03, 1000, 0.9985, 0.0015, 0,
+    0.820, 0.00018, 0.525, 0.593, 0.820, 0.176, 0,
+    0, 22.09, 0, 41.75, 0, 514.23, 0, 0.000305
+  ),
+  UB = c(
+    0.985004423, 0.999088118, 0.632120559, 0.00125, 0.998, 0.013039243, 8.68871e-06,
+    0.055910442, 0.597, 0.03, 1000, 0.9975, 0.0025, 0,
+    0.828, 0.00030, 0.828, 0.721, 0.828, 0.759, 0,
+    0, 36.42, 0, 888.37, 0, 857.05, 0, 0.000508
+  )
+)
 
+df_VIMKUNYA <- data.frame(
+  variable = c(
+    "pbeta", "plambda", "pgamma", "pdelta", "pphi", "ppsi", "pmu", "pkappa", "pomega",
+    "discount", "popsize", "fracsusceptible", "fracinfected", "cycle_length",
+    "U_S", "U_V", "U_E", "U_I", "U_R", "U_C", "U_D",
+    "C_S", "C_V", "C_E", "C_I", "C_R", "C_C", "C_D", "ptheta"
+  ),
+  base_case = c(
+    0.939189937, 0.753403036, 0.56112007, 0.001, 0.978, 0.010445067, 6.95098e-06,
+    0.018995353, 0.521, 0.03, 1000, 0.9980005, 0.0019995, 0.019230769,
+    0.824, 0.000331, 0.700, 0.662, 0.824, 0.494, 0,
+    0, 28.89, 0, 235.44, 0, 685.64, 0, 0.005453
+  ),
+  LB = c(
+    0.813626024, 0.441964854, 0.503414696, 0.00075, 0.972, 0.007844073, 5.21324e-06,
+    0.009543213, 0.445, 0.03, 1000, 0.9985, 0.0015, 0,
+    0.820, 0.000248, 0.525, 0.593, 0.820, 0.176, 0,
+    0, 22.09, 0, 41.75, 0, 514.23, 0, 0.00409
+  ),
+  UB = c(
+    0.985004423, 0.999088118, 0.632120559, 0.00125, 0.983, 0.013039243, 8.68871e-06,
+    0.055910442, 0.597, 0.03, 1000, 0.9975, 0.0025, 0,
+    0.828, 0.000414, 0.828, 0.721, 0.828, 0.759, 0,
+    0, 36.42, 0, 888.37, 0, 857.05, 0, 0.006817
+  )
+)
+wtp <- 7000
+#----
+#run the function SVEIRD over LB and UB
+param_dfI <- df_IXCHIQ
+param_dfV <- df_VIMKUNYA
+base_paramsI <- setNames(param_dfI$base_case, param_dfI$variable)
+base_paramsV <- setNames(param_dfV$base_case, param_dfV$variable)
+get_inmb <- function(params) {
+  res <- run_SVEIRD5(params)
+  v_nmb <- res["v_eff_d"] * wtp - res["v_cost_d"]
+  nv_nmb <- res["nv_eff_d"] * wtp - res["nv_cost_d"]
+  return(v_nmb - nv_nmb)
+}
+DSA_resultsI <- data.frame(Parameter = character(), Bound = character(), INMB = numeric())
+for (i in seq_len(nrow(param_dfI))) {
+  param_name <- param_dfI$variable[i]
+  params_lb <- base_paramsI
+  params_lb[param_name] <- param_dfI$LB[i]
+  inmb_lb <- get_inmb(as.list(params_lb))
+  params_ub <- base_paramsI
+  params_ub[param_name] <- param_dfI$UB[i]
+  inmb_ub <- get_inmb(as.list(params_ub))
+  DSA_resultsI <- rbind(
+    DSA_resultsI,
+    data.frame(Parameter = param_name, Bound = "Lower Bound", INMB = inmb_lb),
+    data.frame(Parameter = param_name, Bound = "Upper Bound", INMB = inmb_ub)
+  )
+}
+DSA_resultsV <- data.frame(Parameter = character(), Bound = character(), INMB = numeric())
+for (i in seq_len(nrow(param_dfV))) {
+  param_name <- param_dfV$variable[i]
+  params_lb <- base_paramsV
+  params_lb[param_name] <- param_dfV$LB[i]
+  inmb_lb <- get_inmb(as.list(params_lb))
+  params_ub <- base_paramsV
+  params_ub[param_name] <- param_dfV$UB[i]
+  inmb_ub <- get_inmb(as.list(params_ub))
+  DSA_resultsV <- rbind(
+    DSA_resultsV,
+    data.frame(Parameter = param_name, Bound = "Lower Bound", INMB = inmb_lb),
+    data.frame(Parameter = param_name, Bound = "Upper Bound", INMB = inmb_ub)
+  )
+}
+DSA_results_IXCHIQ <- DSA_resultsI
+DSA_results_VIMKUNYA <- DSA_resultsV
+DSA_IXCHIQ_wide <- DSA_results_IXCHIQ %>% pivot_wider(names_from = Bound, values_from = INMB)
+DSA_VIMKUNYA_wide <- DSA_results_VIMKUNYA %>% pivot_wider(names_from = Bound, values_from = INMB)
+DSA_IXCHIQ_wide <- DSA_IXCHIQ_wide %>% mutate(range = abs(`Upper Bound` - `Lower Bound`))
+DSA_VIMKUNYA_wide <- DSA_VIMKUNYA_wide %>% mutate(range = abs(`Upper Bound` - `Lower Bound`))
+DSA_IXCHIQ_wide <- DSA_IXCHIQ_wide %>% arrange(desc(range))
+DSA_IXCHIQ_wide <- DSA_IXCHIQ_wide[1:13,]
+DSA_VIMKUNYA_wide <- DSA_VIMKUNYA_wide %>% arrange(desc(range))
+DSA_VIMKUNYA_wide <- DSA_VIMKUNYA_wide[1:13,]
+BaseI <- 759068
+sorted_I <- DSA_IXCHIQ_wide %>%
+  arrange(desc(range)) %>%
+  pull(Parameter)
+plot_dataI <- DSA_IXCHIQ_wide %>%
+  pivot_longer(cols = c("Lower Bound", "Upper Bound"),
+               names_to = "Bound",
+               values_to = "Value") %>%
+  mutate(
+    xmin = pmin(Value, BaseI),
+    xmax = pmax(Value, BaseI),
+    Parameter = factor(Parameter, levels = rev(sorted_I))
+  )
+BaseV <- 694106
+sorted_V <- DSA_VIMKUNYA_wide %>%
+  arrange(desc(range)) %>%
+  pull(Parameter)
+plot_dataV <- DSA_VIMKUNYA_wide %>%
+  pivot_longer(cols = c("Lower Bound", "Upper Bound"),
+               names_to = "Bound",
+               values_to = "Value") %>%
+  mutate(
+    xmin = pmin(Value, BaseV),
+    xmax = pmax(Value, BaseV),
+    Parameter = factor(Parameter, levels = rev(sorted_V))
+  )
+param_labels <- c(
+  pkappa = "Chronic Disease Recovery Probability",
+  U_C = "Utility Chronic Disease",
+  C_C = "Cost Chronic Disease",
+  C_I = "Cost Infection",
+  ppsi = "Vaccination Rate",
+  pomega = "Probability of Chronic Disease",
+  plambda = "Infectious Rate",
+  pbeta = "Transmission Rate",
+  pgamma = "Probability Recover Infectious",
+  fracinfected = "Initial Infection Proportion",
+  U_I = "Utility Infectious CHIKV",
+  U_E = "Utility Exposed",
+  U_R = "Utility Recovered",
+  U_S = "Utility Susceptible"
+)
+#----
+#tornado
+#Live-attenuated
+ggplot(plot_dataI) +
+  geom_segment(aes(x = xmin, xend = xmax, y = Parameter, yend = Parameter, color = Bound),
+               size = 6) +
+  geom_vline(xintercept = BaseI, linetype = "dashed", color = "black") +
+  scale_color_manual(values = c("Lower Bound" = "#3182bd", "Upper Bound" = "#6baed6")) +
+  scale_x_continuous(
+    limits = c(0,1.5e6),
+    breaks = seq(0, 1.5e6, by = 1e5),
+    labels = function(x) sprintf("%.1f", x / 1e5)
+  ) +
+  scale_y_discrete(labels = param_labels) +
+  labs(
+    x = "INMB (Hundred Thousands USD)",
+    y = "Parameter"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line.x = element_line(color = "black", size = 1),
+    axis.line.y = element_line(color = "black", size = 1),
+    axis.ticks.x = element_line(color = "black"),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.text.x = element_text(angle = 0, hjust = 0.5, size = 8),
+    axis.text.y = element_text(size = 8),
+    legend.title = element_blank(),
+    legend.position = "bottom"
+  )
+#recombinant
+ggplot(plot_dataV) +
+  geom_segment(aes(x = xmin, xend = xmax, y = Parameter, yend = Parameter, color = Bound),
+               size = 6) +
+  geom_vline(xintercept = BaseV, linetype = "dashed", color = "black") +
+  scale_color_manual(values = c("Lower Bound" = "#3182bd", "Upper Bound" = "#6baed6")) +
+  scale_x_continuous(
+    limits = c(0,1.5e6),
+    breaks = seq(0, 1.5e6, by = 1e5),
+    labels = function(x) sprintf("%.1f", x / 1e5)
+  ) +
+  scale_y_discrete(labels = param_labels) +
+  labs(
+    x = "INMB (Hundred Thousands USD)",
+    y = "Parameter"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.line.x = element_line(color = "black", size = 1),
+    axis.line.y = element_line(color = "black", size = 1),
+    axis.ticks.x = element_line(color = "black"),
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    axis.text.x = element_text(angle = 0, hjust = 0.5, size = 8),
+    axis.text.y = element_text(size = 8),
+    legend.title = element_blank(),
+    legend.position = "bottom"
+  )
