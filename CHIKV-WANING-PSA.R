@@ -341,21 +341,35 @@ Vimresultsdf <- as.data.frame(Vimresultsdf)
 wtp_values <- seq(1000,150000, by = 1000)
 ceac_df <- data.frame(WTP = wtp_values, NoVax = NA, IXCHIQ = NA, Vimkunya = NA)
 
+nmb_list <- vector("list", length(wtp_values))
+names(nmb_list) <- wtp_values
+
 for (i in seq_along(wtp_values)) {
   wtp <- wtp_values[i]
   nmbNoVax <- resultsdf$nv_eff_d * wtp - resultsdf$nv_cost_d
   nmbIXCHIQ <- resultsdf$v_eff_d * wtp - resultsdf$v_cost_d
   nmbVIM <- Vimresultsdf$v_eff_d * wtp - Vimresultsdf$v_cost_d
   nmbMatrix <- cbind(NoVax = nmbNoVax, IXCHIQ = nmbIXCHIQ, Vimkunya = nmbVIM)
+  nmb_list[[i]] <- nmbMatrix
   best_strategy <- apply(nmbMatrix, 1, function(x) names(which.max(x)))
   ceac_df$NoVax[i] <- mean(best_strategy == "NoVax")
   ceac_df$IXCHIQ[i] <- mean(best_strategy == "IXCHIQ")
   ceac_df$Vimkunya[i] <- mean(best_strategy == "Vimkunya")
 }
 #----
+#EVPI
+EVPI <- numeric(length(wtp_values))
+for (i in seq_along(wtp_values)) {
+  nmbMatrix <- nmb_list[[i]]
+  E_max_NMB <- mean(apply(nmbMatrix, 1, max))
+  max_E_NMB <- max(colMeans(nmbMatrix))
+  EVPI[i] <- E_max_NMB - max_E_NMB
+}
+EVPI_df <- data.frame(WTP = wtp_values, EV_PerfectInfo = EVPI)
+#----
 #plots
 ceac_renamed <- ceac_df %>%
-  rename(`No Vaccination` = NoVax) %>% rename(`Chikungunya Vaccination, Live` = IXCHIQ) %>% rename(`Chikungunya Vaccination, Recombinant` = Vimkunya)
+  rename(`No Vaccination` = NoVax) %>% rename(`Vaccination with live-attenuated CHIKV vaccine` = IXCHIQ) %>% rename(`Vaccination with recombinant CHIKV vaccine` = Vimkunya)
 ceac_long <- pivot_longer(ceac_renamed, cols = -WTP, names_to = "Strategy", values_to = "Probability")
 n_sim <- 1000
 ceac_long <- ceac_long %>%
@@ -364,7 +378,8 @@ ceac_long <- ceac_long %>%
     Lower = pmax(Probability - 1.96* SE,0),
     Upper = Probability + 1.96 * SE
   )
-
+#----
+#standalone PSA
 library(scales)  # for comma()
 
 ggplot(ceac_long, aes(x = WTP, y = Probability, color = Strategy, fill = Strategy)) +
@@ -385,10 +400,77 @@ ggplot(ceac_long, aes(x = WTP, y = Probability, color = Strategy, fill = Strateg
     axis.ticks.x = element_line(color = "black"),
     axis.ticks.y = element_line(color = "black")
   )
+#----
+#overlayed PSA and EVPI
+ceac_df$EVPI_scaled <- EVPI_df$EV_PerfectInfo / 50000
+ggplot(ceac_long, aes(x = WTP, y = Probability, color = Strategy)) +
+  geom_line(size = 1.2) +
+  geom_ribbon(aes(ymin = Lower, ymax = Upper, fill = Strategy),
+              alpha = 0.3, color = NA) +
+  geom_line(data = ceac_df,
+            aes(x = WTP, y = EVPI_scaled, color = "EVPI"),
+            size = 1.2) +
+  geom_segment(aes(x = min(ceac_df$WTP), xend = max(ceac_df$WTP),
+                   y = 0.5, yend = 0.5),
+               linetype = "dashed", color = "grey", size = 1) +
+  geom_segment(aes(x = 7000, xend = 7000,
+                   y = 0, yend = 1),
+               linetype = "dashed", color = "grey", size = 1) +
+  scale_y_continuous(
+    name = "Probability of being cost-effective",
+    limits = c(0, 1),
+    expand = c(0, 0),
+    sec.axis = sec_axis(trans = function(x) { x * 50000 }, name = "EVPI (USD)", labels = scales::comma)
+  ) +
+  scale_x_continuous(
+    limits = c(0, max(ceac_df$WTP)),
+    expand = c(0, 0),
+    labels = scales::dollar_format()
+  ) +
+  scale_color_manual(
+    values = c(
+      "EVPI" = "black",
+      "No Vaccination" = "red",
+      "Vaccination with live-attenuated CHIKV vaccine" = "blue",
+      "Vaccination with recombinant CHIKV vaccine" = "green"
+    ),
+    breaks = c(
+      "No Vaccination",
+      "Vaccination with live-attenuated CHIKV vaccine",
+      "Vaccination with recombinant CHIKV vaccine",
+      "EVPI"
+    )
+  ) +
+  scale_fill_manual(
+    values = c(
+      "No Vaccination" = "red",
+      "Vaccination with live-attenuated CHIKV vaccine" = "blue",
+      "Vaccination with recombinant CHIKV vaccine" = "green"
+    ),
+    guide = "none"
+  ) +
+  labs(
+    x = "Willingness-to-Pay Threshold",
+    color = "Legend",
+    fill = "Strategy"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    legend.position = c(0.5, 0.75),
+    axis.title.y.right = element_text(color = "black"),
+    axis.text.y.right = element_text(color = "black"),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.ticks.x = element_line(color = "grey"),
+    axis.ticks.y = element_line(color = "grey"),
+    axis.line.x = element_line(color = "grey", size = 1),
+    axis.line.y = element_line(color = "grey", size = 1)
+  )
 
 
 
-
+#----
+#scatter
 resultsdf <- resultsdf %>% mutate(IC = v_cost_d - nv_cost_d)
 resultsdf <- resultsdf %>% mutate(IE = v_eff_d - nv_eff_d)
 ggplot(resultsdf, aes(x = IE, y = IC)) +
