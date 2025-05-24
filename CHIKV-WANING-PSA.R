@@ -1,13 +1,14 @@
 #----
 #this script attempts to model the impact of vaccine waning
-#V no longer can go to E, everyone in V stays in V until their immunity wanes at rate theta
+#Everyone in V stays in V until their immunity wanes at rate theta
 #Theta is derived from extrapolating a linear decline of 1 month sero response to 0
-#Individuasl go to VE from V representing waning or from S representing those in which the vaccine did not work
+#Individuals go to VE from V representing waning or from S representing those in which the vaccine did not work
 #These people progress at rate (1-phi)*psi*S
 #----
 #packages
 library(tidyverse)
 library(ggplot2)
+library(mosaic)
 library(mc2d)
 library(scales)
 library(parallel)
@@ -690,3 +691,17 @@ ggplot(plot_dataV) +
     legend.title = element_blank(),
     legend.position = "bottom"
   )
+
+#----
+#bootstrapping
+#adapted from Data Science in R: A Gentle Introduction, James G. Scott, August 2021, https://bookdown.org/jgscott/DSGI/
+nmb7000 <- nmb_list$'7000'
+nmb7000 <- as.data.frame(nmb7000)
+nmb7000 <- nmb7000 %>% mutate(INMB_LNV = IXCHIQ - NoVax, INMB_RNV = Vimkunya - NoVax, INMBLR = IXCHIQ - Vimkunya)
+bootINMB_LNV <- do(10000)*mean(~INMB_LNV, data = mosaic::resample(nmb7000))
+bootINMB_RNV <- do(10000)*mean(~INMB_RNV, data = mosaic::resample(nmb7000))
+bootINMBLR <- do(10000) * mean(~INMBLR, data = mosaic::resample(nmb7000))
+CI_INMB_LNV <- confint(bootINMB_LNV, level = 0.95)
+CI_INMB_RNV <- confint(bootINMB_RNV, level = 0.95)
+CI_INMBLR <- confint(bootINMBLR, level = 0.95)
+
