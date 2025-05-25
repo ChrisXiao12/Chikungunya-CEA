@@ -249,16 +249,19 @@ run_SVEIRD5 <- function(params, return_trace = FALSE) {
     0, 0, 0, 0, 0, 0, 0         # EI, ED, IR, IC, ID, RD, CR, CD
   )
   trace_nv <- trace_v
-
+  #testing when Beta is different
+  pbetaS <- pbeta
+  pbetaSV <- pbeta
+  #change to have pbetaS or pbetaSV be different
 
   for(i in 2:length(trace_v$S)){
     trace_v$SV[i] <- trace_v$S[i-1] * ppsi * pphi
     trace_v$SVE[i] <- trace_v$S[i-1] * ppsi * (1-pphi)
-    trace_v$SE[i] <- trace_v$S[i-1] * pbeta * trace_v$I[i-1] / trace_v$N[i-1]
+    trace_v$SE[i] <- trace_v$S[i-1] * pbetaS * trace_v$I[i-1] / trace_v$N[i-1]
     trace_v$SD[i] <- trace_v$S[i-1] * pmu
     trace_v$VVE[i] <- trace_v$V[i-1] * ptheta
     trace_v$VED[i] <- trace_v$VE[i-1] * pmu
-    trace_v$VEE[i] <- trace_v$VE[i-1] * pbeta * trace_v$I[i-1] / trace_v$N[i-1]
+    trace_v$VEE[i] <- trace_v$VE[i-1] * pbetaSV * trace_v$I[i-1] / trace_v$N[i-1]
     trace_v$VD[i] <- trace_v$V[i-1] * pmu
     trace_v$EI[i] <- trace_v$E[i-1] * plambda
     trace_v$ED[i] <- trace_v$E[i-1] * pmu
@@ -283,11 +286,11 @@ run_SVEIRD5 <- function(params, return_trace = FALSE) {
   for(i in 2:length(trace_nv$S)){
     trace_nv$SV[i] <- 0
     trace_nv$SVE[i] <- 0
-    trace_nv$SE[i] <- trace_nv$S[i-1] * pbeta * trace_nv$I[i-1] / trace_nv$N[i-1]
+    trace_nv$SE[i] <- trace_nv$S[i-1] * pbetaS * trace_nv$I[i-1] / trace_nv$N[i-1]
     trace_nv$SD[i] <- trace_nv$S[i-1] * pmu
     trace_nv$VVE[i] <- trace_nv$V[i-1] * ptheta
     trace_nv$VED[i] <- trace_nv$VE[i-1] * pmu
-    trace_nv$VEE[i] <- trace_nv$VE[i-1] * pbeta * trace_nv$I[i-1] / trace_nv$N[i-1]
+    trace_nv$VEE[i] <- trace_nv$VE[i-1] * pbetaSV * trace_nv$I[i-1] / trace_nv$N[i-1]
     trace_nv$VD[i] <- trace_nv$V[i-1] * pmu
     trace_nv$EI[i] <- trace_nv$E[i-1] * plambda
     trace_nv$ED[i] <- trace_nv$E[i-1] * pmu
