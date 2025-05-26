@@ -1,6 +1,7 @@
 #----
-#this script attempts to model the impact of vaccine waning
+#this script attempts to model Chikungunya using a SVEIRD model
 #Everyone in V stays in V until their immunity wanes at rate theta
+#IXCHIQ = live-attenuated, Vimkunya = recombinant
 #Theta is derived from extrapolating a linear decline of 1 month sero response to 0
 #Individuals go to VE from V representing waning or from S representing those in which the vaccine did not work
 #These people progress at rate (1-phi)*psi*S
@@ -15,7 +16,7 @@ library(parallel)
 library(dplyr)
 library(tibble)
 #----
-#basecase parameter dataframes
+#base_case parameter dataframes
 liveattenuated_base_case <- list(
   pbeta = 0.939189937,
   plambda = 0.753403036,
@@ -45,8 +46,7 @@ liveattenuated_base_case <- list(
   C_I = 235.44,
   C_R = 0.00,
   C_C = 685.64,
-  C_D = 0.00,
-  C_VIM = 28.89
+  C_D = 0.00
 )
 
 recombinant_base_case <- list(
@@ -81,13 +81,13 @@ recombinant_base_case <- list(
   C_D = 0.00
 )
 #----
-#draws for PSA
+#create variable draws for PSA
 R0_draws <- rgamma(1000,shape = 54.8258, scale = 0.0620146)
 Lambda_draws <- rgamma(1000,shape = 0.7314914, scale = 1.913898)
 Gamma_draws <- rgamma(1000,shape = 115.7945, scale = 0.007111992)
 Delta_draws <- rbeta(1000,61.40313,61341.73)
 Phi_draws <- rbeta(1000,260.2326,8.602732)
-Phi_VIM_draws <- rbeta(1000,1935.908,328.3118)
+Phi_R_draws <- rbeta(1000,1935.908,328.3118)
 Psi_draws <- rgamma(1000,shape = 61.4656, scale = 0.0001708273)
 Mu_draws <- rgamma(1000,shape = 61.4656, scale = 0.0000001130876)
 Kappa_draws <- rbeta(1000,2.392294,122.3488)
@@ -96,7 +96,7 @@ Beta_draws <- R0_draws * Gamma_draws
 #transform to probabilities
 pDelta_draws <- Delta_draws
 pPhi_draws <- Phi_draws
-pPhi_Vim_draws <- Phi_VIM_draws
+pPhi_R_draws <- Phi_R_draws
 pOmega_draws <- Omega_draws
 pLambda_draws <- 1 - exp(-Lambda_draws)
 pGamma_draws <- 1 - exp(-Gamma_draws)
@@ -109,27 +109,27 @@ pop_draws <- rep(1000,1000)
 fracinfected_draws <- rbeta(1000, 61.03465,30532.77)
 fracsusceptible_draws <- 1 - fracinfected_draws
 cyclelength_draws <- rep(1/52,1000)
-R_adverse_IXCHIQ <- rbeta(1000,60.27875,3112.287)
-R_adverse_Vim <- rbeta(1000,10.81465, 405.1335)
+R_adverse_L <- rbeta(1000,60.27875,3112.287)
+R_adverse_R <- rbeta(1000,10.81465, 405.1335)
 U_S_draws <- rbeta(1000,28691.07,6128.19)
 U_R_draws <- U_S_draws
-Theta_I_draws <- rbeta(1000,61.44024,151269.2)
-Theta_V_draws <- rbeta(1000,61.10256,11144.21)
+Theta_L_draws <- rbeta(1000,61.44024,151269.2)
+Theta_R_draws <- rbeta(1000,61.10256,11144.21)
 U_E_draws_raw <- rbeta(1000,23.90391,10.24453)
 U_I_draws_raw <- rbeta(1000,138.2644, 70.59423)
-U_E_draws <- pmin(U_E_draws_raw, U_S_draws)
+U_E_draws <- pmin(U_E_draws_raw, U_S_draws) #force U_E and U_I to be less than U_S logically
 U_I_draws <- pmin(U_I_draws_raw, U_S_draws)
-U_V_draws <- R_adverse_IXCHIQ * U_S_draws *cyclelength_draws - R_adverse_IXCHIQ * U_I_draws * cyclelength_draws
-U_VIM_draws <- R_adverse_Vim * U_S_draws * cyclelength_draws - R_adverse_Vim * U_I_draws * cyclelength_draws
+U_V_draws <- R_adverse_L * U_S_draws *cyclelength_draws - R_adverse_L * U_I_draws * cyclelength_draws #disutility from adverse effects
+U_VR_draws <- R_adverse_R * U_S_draws * cyclelength_draws - R_adverse_R * U_I_draws * cyclelength_draws
 U_C_draws <- rbeta(1000,5.088638,5.212248)
 U_D_draws <- rep(0,1000)
 C_S_draws <- rep(0,1000)
-Vax_Dose_draws_I <- rgamma(1000,shape = 104.7666, scale = 0.2243081)
-Vax_Dose_draws_Vim <- rgamma(1000,shape = 104.7666, scale = 0.2243081)
+Vax_Dose_draws_L <- rgamma(1000,shape = 104.7666, scale = 0.2243081)
+Vax_Dose_draws_R <- rgamma(1000,shape = 104.7666, scale = 0.2243081)
 Admin_draws <- rgamma(1000,shape = 61.4656, scale = 0.04522855)
 Waste_draws <- rpert(1000, min = 0.05, mode = 0.1, max = 0.15)
-C_V_draws <- Vax_Dose_draws_I / (1 - Waste_draws) + Admin_draws
-C_Vim_draws <- Vax_Dose_draws_Vim / (1 - Waste_draws) + Admin_draws
+C_V_draws <- Vax_Dose_draws_L / (1 - Waste_draws) + Admin_draws #adds vaccine waste and admin cost
+C_VR_draws <- Vax_Dose_draws_R / (1 - Waste_draws) + Admin_draws
 D_hosp_draws <- rgamma(1000, shape = 61.57906, scale = 0.1761963)
 Cost_hosp_draws <- rgamma(1000, shape = 61.4656, scale = 14.09113)
 P_hosp_draws <- rbeta(1000, 60.43122,3291.949)
@@ -154,6 +154,8 @@ C_R_draws <- rep(0,1000)
 C_C_draws <- Chronic_direct + TC_indirect_chronic + 6 * Outpatient_visit
 C_D_draws <- rep(0,1000)
 #----
+#create a dataframe of draws for PSA analysis
+#live-attenuated
 parametersdf <- data.frame(
   pbeta = pBeta_draws,
   plambda = pLambda_draws,
@@ -169,7 +171,7 @@ parametersdf <- data.frame(
   fracsusceptible = fracsusceptible_draws,
   fracinfected = fracinfected_draws,
   cycle_length = cyclelength_draws,
-  ptheta = Theta_I_draws,
+  ptheta = Theta_L_draws,
   U_S = U_S_draws,
   U_V = U_V_draws,
   U_E = U_E_draws,
@@ -185,13 +187,17 @@ parametersdf <- data.frame(
   C_C = C_C_draws,
   C_D = C_D_draws
 )
-Vimkunyaparametersdf <- parametersdf
-Vimkunyaparametersdf$pphi <- pPhi_Vim_draws
-Vimkunyaparametersdf$U_V <- U_VIM_draws
-Vimkunyaparametersdf$C_V <- C_Vim_draws
-Vimkunyaparametersdf$ptheta <- Theta_V_draws
+#Recombinant
+Recomboparametersdf <- parametersdf
+Recomboparametersdf$pphi <- pPhi_R_draws
+Recomboparametersdf$U_V <- U_VR_draws
+Recomboparametersdf$C_V <- C_VR_draws
+Recomboparametersdf$ptheta <- Theta_R_draws
 #----
+#create a function which runs the SVEIRD model
+#520 cycles with 1 week cycle lengths
 run_SVEIRD5 <- function(params, return_trace = FALSE) {
+  #load in the parameters
   pbeta <- params[["pbeta"]]
   plambda <- params[["plambda"]]
   pgamma <- params[["pgamma"]]
@@ -208,7 +214,7 @@ run_SVEIRD5 <- function(params, return_trace = FALSE) {
   fracinfected <- params[["fracinfected"]]
   cycle_length <- params[["cycle_length"]]
 
-  U_S <- params[["U_S"]] * cycle_length
+  U_S <- params[["U_S"]] * cycle_length #adjusted for length of state
   U_E <- params[["U_E"]] * cycle_length
   U_V <- params[["U_V"]] #already adjusted
   U_I <- params[["U_I"]] * cycle_length
@@ -228,7 +234,7 @@ run_SVEIRD5 <- function(params, return_trace = FALSE) {
   trace_v <- data.frame(matrix(0, nrow = 520, ncol = length(names)))
   colnames(trace_v) <- names
 
-  #initialize trace
+  #Create the trace matrices
   trace_v <- data.frame(matrix(0, nrow = 520, ncol = length(names)))
   colnames(trace_v) <- names
 
@@ -249,11 +255,12 @@ run_SVEIRD5 <- function(params, return_trace = FALSE) {
     0, 0, 0, 0, 0, 0, 0         # EI, ED, IR, IC, ID, RD, CR, CD
   )
   trace_nv <- trace_v
-  #testing when Beta is different
+  #To model differential betas
   pbetaS <- pbeta
   pbetaSV <- pbeta
-  #change to have pbetaS or pbetaSV be different
-
+  #change to have pbetaS or pbetaSV be different where pbetaS is beta for
+  #susceptible vaccine naive and pbetaSV is beta for susceptible vaccine exposed
+  #loop through the equations which define state transitions
   for(i in 2:length(trace_v$S)){
     trace_v$SV[i] <- trace_v$S[i-1] * ppsi * pphi
     trace_v$SVE[i] <- trace_v$S[i-1] * ppsi * (1-pphi)
@@ -282,7 +289,7 @@ run_SVEIRD5 <- function(params, return_trace = FALSE) {
     trace_v$N[i] <- trace_v$S[i] + trace_v$E[i] + trace_v$V[i] + trace_v$I[i] + trace_v$R[i] + trace_v$C[i] + trace_v$VE[i]
     trace_v$Check[i] <- trace_v$S[i] + trace_v$V[i] + trace_v$I[i] + trace_v$R[i] + trace_v$C[i] + trace_v$E[i] + trace_v$D[i] + trace_v$VE[i]
   }
-
+  #repeat for the nonvaccinated
   for(i in 2:length(trace_nv$S)){
     trace_nv$SV[i] <- 0
     trace_nv$SVE[i] <- 0
@@ -311,12 +318,16 @@ run_SVEIRD5 <- function(params, return_trace = FALSE) {
     trace_nv$N[i] <- trace_nv$S[i] + trace_nv$E[i] + trace_nv$V[i] + trace_nv$I[i] + trace_nv$R[i] + trace_nv$C[i]
     trace_nv$Check[i] <- trace_nv$S[i] + trace_nv$V[i] + trace_nv$I[i] + trace_nv$R[i] + trace_nv$C[i] + trace_nv$E[i] + trace_nv$D[i] + trace_nv$VE[i]
   }
-
+  #create a vector of utilities and costs
   utility_vector <- c(U_S, U_E, U_S, U_S, U_I, U_R, U_C, U_D)
   cost_vector <- c(C_S, C_E, C_V, C_V, C_I, C_R, C_C, C_D)
+  #create trace matrix over which to apply these vectors
+  #Trace matrices include only the states and not the transition columns
   utility_trace_v <- trace_v[,1:8]
   utility_trace_v <- apply(trace_v[,1:8], 1, function(row) row * utility_vector)
+  #transpose the trace matrix after
   utility_trace_v <- t(utility_trace_v)
+  #need to subtract the disutilities from adverse events related to vaccination
   for(i in 1:nrow(utility_trace_v)) {
     utility_trace_v[i,3] <- utility_trace_v[i,3] - trace_v$SV[i] * U_V
     utility_trace_v[i,4] <- utility_trace_v[i,4] - trace_v$SVE[i] * U_V
@@ -327,6 +338,7 @@ run_SVEIRD5 <- function(params, return_trace = FALSE) {
   cost_trace_v <- trace_v[,1:8]
   cost_trace_v <- apply(cost_trace_v, 1, function(row) row * cost_vector)
   cost_trace_v <- t(cost_trace_v)
+  #add in onetime vaccination costs (costs only come form those that newly transitioned to V)
   for(i in 1:nrow(cost_trace_v)) {
     cost_trace_v[i,3] <- trace_v$SV[i] * C_V
     cost_trace_v[i,4] <- trace_v$SVE[i] * C_V
@@ -336,6 +348,7 @@ run_SVEIRD5 <- function(params, return_trace = FALSE) {
   cost_trace_nv <- apply(trace_nv[,1:8], 1, function(row) row * cost_vector)
   cost_trace_nv <- t(cost_trace_nv)
   discount_factors <- 1 / (1 + discount) ^ ((0:(520 - 1)) / 52)
+  #apply discounting
   v_eff_d <- sum(rowSums(utility_trace_v) * discount_factors)
   nv_eff_d <- sum(rowSums(utility_trace_nv) * discount_factors)
   v_cost_d <- sum(rowSums(cost_trace_v) * discount_factors)
@@ -350,9 +363,11 @@ run_SVEIRD5 <- function(params, return_trace = FALSE) {
       nv_eff_d = nv_eff_d
     ))
   }
+  #return the discounted costs and effects for vaccination vs no vaccination
   return(c(v_cost_d = v_cost_d, nv_cost_d = nv_cost_d, v_eff_d = v_eff_d, nv_eff_d = nv_eff_d))
 }
 #----
+#get base-case results and calculate NMB / INMB with a WTP of 7000
 base_case_results_live <- run_SVEIRD5(liveattenuated_base_case)
 base_case_results_recombinant <- run_SVEIRD5(recombinant_base_case)
 NMB_live <- base_case_results_live[3] * 7000 - base_case_results_live[1]
@@ -362,7 +377,7 @@ INMB_livevsnovax <- NMB_live - NMB_novax
 INMB_recombovsnovax <- NMB_recombo - NMB_novax
 INMB_livevsrecombo <- NMB_live - NMB_recombo
 #----
-#multicore processing
+#multicore processing for PSA
 num_cores <- detectCores() - 1
 cl <- makeCluster(num_cores)  # Create parallel cluster
 
@@ -370,7 +385,8 @@ clusterExport(cl, varlist = c("parametersdf", "run_SVEIRD5"))
 
 clusterEvalQ(cl, { library(dplyr); library(tibble) })
 
-# Run parallel execution
+#Run parallel execution
+#Runs the SVEIRD function over each row of the PSA draws
 results_list <- parLapply(cl, 1:1000, function(i) {
   # Load required libraries inside worker
   library(dplyr)
@@ -386,107 +402,57 @@ stopCluster(cl)
 resultsdf <- do.call(rbind, results_list)
 resultsdf <- as.data.frame(resultsdf)
 #----
+#repeat this for the recombinant vaccine
 num_cores <- detectCores() - 1
 cl <- makeCluster(num_cores)  # Create parallel cluster
 
-clusterExport(cl, varlist = c("Vimkunyaparametersdf", "run_SVEIRD5"))
+clusterExport(cl, varlist = c("Recomboparametersdf", "run_SVEIRD5"))
 
 clusterEvalQ(cl, { library(dplyr); library(tibble) })
 
 # Run parallel execution
-Vimresults_list <- parLapply(cl, 1:1000, function(i) {
+Recomboresults_list <- parLapply(cl, 1:1000, function(i) {
   # Load required libraries inside worker
   library(dplyr)
   library(tibble)
 
-  run_SVEIRD5(Vimkunyaparametersdf[i, ])
+  run_SVEIRD5(Recomboparametersdf[i, ])
 })
 
 # Stop cluster
 stopCluster(cl)
 
 # Convert list to dataframe
-Vimresultsdf <- do.call(rbind, Vimresults_list)
-Vimresultsdf <- as.data.frame(Vimresultsdf)
+Recomboresultsdf <- do.call(rbind, Recomboresults_list)
+Recomboresultsdf <- as.data.frame(Recomboresultsdf)
 #----
-#NMB calculations
+#NMB calculations for PSA
+#create a sequence of WTP values
 wtp_values <- seq(1000,150000, by = 1000)
-ceac_df <- data.frame(WTP = wtp_values, NoVax = NA, IXCHIQ = NA, Vimkunya = NA)
+ceac_df <- data.frame(WTP = wtp_values, NoVax = NA, Live = NA, Recombo = NA)
 
 nmb_list <- vector("list", length(wtp_values))
 names(nmb_list) <- wtp_values
-
+#for each WTP value calculate the NMB for each draw
+#Calculate which strategy has the highest NMB
+#Calculate how many times the strategy wins
 for (i in seq_along(wtp_values)) {
   wtp <- wtp_values[i]
   nmbNoVax <- resultsdf$nv_eff_d * wtp - resultsdf$nv_cost_d
-  nmbIXCHIQ <- resultsdf$v_eff_d * wtp - resultsdf$v_cost_d
-  nmbVIM <- Vimresultsdf$v_eff_d * wtp - Vimresultsdf$v_cost_d
-  nmbMatrix <- cbind(NoVax = nmbNoVax, IXCHIQ = nmbIXCHIQ, Vimkunya = nmbVIM)
+  nmbLive <- resultsdf$v_eff_d * wtp - resultsdf$v_cost_d
+  nmbRecombo <- Recomboresultsdf$v_eff_d * wtp - Recomboresultsdf$v_cost_d
+  nmbMatrix <- cbind(NoVax = nmbNoVax, Live = nmbLive, Recombo = nmbRecombo)
   nmb_list[[i]] <- nmbMatrix
   best_strategy <- apply(nmbMatrix, 1, function(x) names(which.max(x)))
   ceac_df$NoVax[i] <- mean(best_strategy == "NoVax")
-  ceac_df$IXCHIQ[i] <- mean(best_strategy == "IXCHIQ")
-  ceac_df$Vimkunya[i] <- mean(best_strategy == "Vimkunya")
+  ceac_df$Live[i] <- mean(best_strategy == "Live")
+  ceac_df$Recombo[i] <- mean(best_strategy == "Recombo")
 }
-#----
-#plots for the PSA
-ceac_renamed <- ceac_df %>%
-  rename(`No Vaccination` = NoVax) %>% rename(`Vaccination with live-attenuated CHIKV vaccine` = IXCHIQ) %>% rename(`Vaccination with recombinant CHIKV vaccine` = Vimkunya)
-ceac_long <- pivot_longer(ceac_renamed, cols = -WTP, names_to = "Strategy", values_to = "Probability")
-n_sim <- 1000
-ceac_long <- ceac_long %>%
-  mutate(
-    SE = sqrt(Probability * (1-Probability) / n_sim),
-    Lower = pmax(Probability - 1.96* SE,0),
-    Upper = Probability + 1.96 * SE
-  )
-#----
-#standalone PSA
-library(scales)  # for comma()
-
-ggplot(ceac_long, aes(x = WTP, y = Probability, color = Strategy, fill = Strategy)) +
-  geom_smooth(se = FALSE, method = "loess", span = 0.85, size = 1.2) +
-  geom_ribbon(aes(ymin = Lower, ymax = Upper), alpha = 0.15, color = NA) +
-  scale_x_continuous(labels = comma) +  # thousands separator
-  labs(
-    x = "Willingness to Pay (USD)",
-    y = "Probability Cost-Effective"
-  ) +
-  theme_minimal(base_size = 13) +
-  theme(
-    legend.position = c(0.75, 0.75),
-    panel.grid.major = element_blank(),
-    panel.grid.minor = element_blank(),
-    axis.line.x = element_line(color = "black", size = 1),
-    axis.line.y = element_line(color = "black", size = 1),
-    axis.ticks.x = element_line(color = "black"),
-    axis.ticks.y = element_line(color = "black")
-  )
-#----
-#scatter
-resultsdf <- resultsdf %>% mutate(IC = v_cost_d - nv_cost_d)
-resultsdf <- resultsdf %>% mutate(IE = v_eff_d - nv_eff_d)
-ggplot(resultsdf, aes(x = IE, y = IC)) +
-  geom_point(alpha = 0.5, color = "blue") +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "red") +
-  labs(
-    title = "Cost-Effectiveness Plane",
-    x = "Incremental Effectiveness",
-    y = "Incremental Cost"
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(hjust = 0.5, face = "bold", size = 12),
-    axis.title = element_text(size = 12),
-    axis.text = element_text(size = 10)
-  ) +
-  scale_y_continuous(labels = scales::comma)
 #----
 #conduct one-way deterministic sensitivty analysis and generate tornado plots
 #create dataframes for IXCHIQ (live-attenuated) and VIMKUNYA (recombinant) containing
 #base-case values, LB, and UB
-df_IXCHIQ <- data.frame(
+df_Live <- data.frame(
   variable = c(
     "pbeta", "plambda", "pgamma", "pdelta", "pphi", "ppsi", "pmu", "pkappa", "pomega",
     "discount", "popsize", "fracsusceptible", "fracinfected", "cycle_length",
@@ -513,7 +479,7 @@ df_IXCHIQ <- data.frame(
   )
 )
 
-df_VIMKUNYA <- data.frame(
+df_Recombo <- data.frame(
   variable = c(
     "pbeta", "plambda", "pgamma", "pdelta", "pphi", "ppsi", "pmu", "pkappa", "pomega",
     "discount", "popsize", "fracsusceptible", "fracinfected", "cycle_length",
@@ -542,82 +508,90 @@ df_VIMKUNYA <- data.frame(
 wtp <- 7000
 #----
 #run the function SVEIRD over LB and UB
-param_dfI <- df_IXCHIQ
-param_dfV <- df_VIMKUNYA
-base_paramsI <- setNames(param_dfI$base_case, param_dfI$variable)
-base_paramsV <- setNames(param_dfV$base_case, param_dfV$variable)
+param_dfL <- df_Live
+param_dfR <- df_Recombo
+base_paramsL <- setNames(param_dfL$base_case, param_dfL$variable)
+base_paramsR <- setNames(param_dfR$base_case, param_dfR$variable)
+#Function to calculate the INMB
 get_inmb <- function(params) {
   res <- run_SVEIRD5(params)
   v_nmb <- res["v_eff_d"] * wtp - res["v_cost_d"]
   nv_nmb <- res["nv_eff_d"] * wtp - res["nv_cost_d"]
   return(v_nmb - nv_nmb)
 }
-DSA_resultsI <- data.frame(Parameter = character(), Bound = character(), INMB = numeric())
-for (i in seq_len(nrow(param_dfI))) {
-  param_name <- param_dfI$variable[i]
-  params_lb <- base_paramsI
-  params_lb[param_name] <- param_dfI$LB[i]
+#initialize an empty datafrane to store results
+DSA_resultsL <- data.frame(Parameter = character(), Bound = character(), INMB = numeric())
+#loop for each variable calling get_inmb and storing the result, and then adding it to the dataframe
+for (i in seq_len(nrow(param_dfL))) {
+  param_name <- param_dfL$variable[i]
+  params_lb <- base_paramsL
+  params_lb[param_name] <- param_dfL$LB[i]
   inmb_lb <- get_inmb(as.list(params_lb))
-  params_ub <- base_paramsI
-  params_ub[param_name] <- param_dfI$UB[i]
+  params_ub <- base_paramsL
+  params_ub[param_name] <- param_dfL$UB[i]
   inmb_ub <- get_inmb(as.list(params_ub))
-  DSA_resultsI <- rbind(
-    DSA_resultsI,
+  DSA_resultsL <- rbind(
+    DSA_resultsL,
     data.frame(Parameter = param_name, Bound = "Lower Bound", INMB = inmb_lb),
     data.frame(Parameter = param_name, Bound = "Upper Bound", INMB = inmb_ub)
   )
 }
-DSA_resultsV <- data.frame(Parameter = character(), Bound = character(), INMB = numeric())
-for (i in seq_len(nrow(param_dfV))) {
-  param_name <- param_dfV$variable[i]
-  params_lb <- base_paramsV
-  params_lb[param_name] <- param_dfV$LB[i]
+DSA_resultsR <- data.frame(Parameter = character(), Bound = character(), INMB = numeric())
+for (i in seq_len(nrow(param_dfR))) {
+  param_name <- param_dfR$variable[i]
+  params_lb <- base_paramsR
+  params_lb[param_name] <- param_dfR$LB[i]
   inmb_lb <- get_inmb(as.list(params_lb))
-  params_ub <- base_paramsV
-  params_ub[param_name] <- param_dfV$UB[i]
+  params_ub <- base_paramsR
+  params_ub[param_name] <- param_dfR$UB[i]
   inmb_ub <- get_inmb(as.list(params_ub))
-  DSA_resultsV <- rbind(
-    DSA_resultsV,
+  DSA_resultsR <- rbind(
+    DSA_resultsR,
     data.frame(Parameter = param_name, Bound = "Lower Bound", INMB = inmb_lb),
     data.frame(Parameter = param_name, Bound = "Upper Bound", INMB = inmb_ub)
   )
 }
-DSA_results_IXCHIQ <- DSA_resultsI
-DSA_results_VIMKUNYA <- DSA_resultsV
-DSA_IXCHIQ_wide <- DSA_results_IXCHIQ %>% pivot_wider(names_from = Bound, values_from = INMB)
-DSA_VIMKUNYA_wide <- DSA_results_VIMKUNYA %>% pivot_wider(names_from = Bound, values_from = INMB)
-DSA_IXCHIQ_wide <- DSA_IXCHIQ_wide %>% mutate(range = abs(`Upper Bound` - `Lower Bound`))
-DSA_VIMKUNYA_wide <- DSA_VIMKUNYA_wide %>% mutate(range = abs(`Upper Bound` - `Lower Bound`))
-DSA_IXCHIQ_wide <- DSA_IXCHIQ_wide %>% arrange(desc(range))
-DSA_IXCHIQ_wide <- DSA_IXCHIQ_wide[1:13,]
-DSA_VIMKUNYA_wide <- DSA_VIMKUNYA_wide %>% arrange(desc(range))
-DSA_VIMKUNYA_wide <- DSA_VIMKUNYA_wide[1:13,]
-BaseI <- 759068
-sorted_I <- DSA_IXCHIQ_wide %>%
+DSA_results_Live <- DSA_resultsL
+DSA_results_Recombo <- DSA_resultsR
+#change format to wide
+DSA_Live_wide <- DSA_results_Live %>% pivot_wider(names_from = Bound, values_from = INMB)
+DSA_Recombo_wide <- DSA_results_Recombo %>% pivot_wider(names_from = Bound, values_from = INMB)
+#calculate the range of absolute value of (UB - LB)
+DSA_Live_wide <- DSA_Live_wide %>% mutate(range = abs(`Upper Bound` - `Lower Bound`))
+DSA_Recombo_wide <- DSA_Recombo_wide %>% mutate(range = abs(`Upper Bound` - `Lower Bound`))
+DSA_Live_wide <- DSA_Live_wide %>% arrange(desc(range))
+#arrange by descending order for range and take only the values that are > 2.5% total INMB
+#This happens to be only the 1-13th parameters
+DSA_Live_wide <- DSA_Live_wide[1:13,]
+DSA_Recombo_wide <- DSA_Recombo_wide %>% arrange(desc(range))
+DSA_Recombo_wide <- DSA_Recombo_wide[1:13,]
+BaseL <- 759068 #the base INMB
+sorted_L <- DSA_Live_wide %>%
   arrange(desc(range)) %>%
-  pull(Parameter)
-plot_dataI <- DSA_IXCHIQ_wide %>%
+  pull(Parameter) #pull the parameter name
+plot_dataL <- DSA_Live_wide %>% #turn this make into long format for ggplot
   pivot_longer(cols = c("Lower Bound", "Upper Bound"),
                names_to = "Bound",
                values_to = "Value") %>%
   mutate(
-    xmin = pmin(Value, BaseI),
-    xmax = pmax(Value, BaseI),
-    Parameter = factor(Parameter, levels = rev(sorted_I))
+    xmin = pmin(Value, BaseL),
+    xmax = pmax(Value, BaseL),
+    Parameter = factor(Parameter, levels = rev(sorted_L))
   )
-BaseV <- 694106
-sorted_V <- DSA_VIMKUNYA_wide %>%
+BaseR <- 694106
+sorted_R <- DSA_Recombo_wide %>%
   arrange(desc(range)) %>%
   pull(Parameter)
-plot_dataV <- DSA_VIMKUNYA_wide %>%
+plot_dataR <- DSA_Recombo_wide %>%
   pivot_longer(cols = c("Lower Bound", "Upper Bound"),
                names_to = "Bound",
                values_to = "Value") %>%
   mutate(
-    xmin = pmin(Value, BaseV),
-    xmax = pmax(Value, BaseV),
-    Parameter = factor(Parameter, levels = rev(sorted_V))
+    xmin = pmin(Value, BaseR),
+    xmax = pmax(Value, BaseR),
+    Parameter = factor(Parameter, levels = rev(sorted_R))
   )
+#change the labels for the selected parameters
 param_labels <- c(
   pkappa = "Chronic Disease Recovery Probability",
   U_C = "Utility Chronic Disease",
@@ -637,10 +611,10 @@ param_labels <- c(
 #----
 #tornado
 #Live-attenuated
-ggplot(plot_dataI) +
+ggplot(plot_dataL) +
   geom_segment(aes(x = xmin, xend = xmax, y = Parameter, yend = Parameter, color = Bound),
                size = 6) +
-  geom_vline(xintercept = BaseI, linetype = "dashed", color = "black") +
+  geom_vline(xintercept = BaseL, linetype = "dashed", color = "black") +
   scale_color_manual(values = c("Lower Bound" = "#3182bd", "Upper Bound" = "#6baed6")) +
   scale_x_continuous(
     limits = c(0,1.5e6),
@@ -666,10 +640,10 @@ ggplot(plot_dataI) +
     legend.position = "bottom"
   )
 #recombinant
-ggplot(plot_dataV) +
+ggplot(plot_dataR) +
   geom_segment(aes(x = xmin, xend = xmax, y = Parameter, yend = Parameter, color = Bound),
                size = 6) +
-  geom_vline(xintercept = BaseV, linetype = "dashed", color = "black") +
+  geom_vline(xintercept = BaseR, linetype = "dashed", color = "black") +
   scale_color_manual(values = c("Lower Bound" = "#3182bd", "Upper Bound" = "#6baed6")) +
   scale_x_continuous(
     limits = c(0,1.5e6),
@@ -698,21 +672,24 @@ ggplot(plot_dataV) +
 #----
 #bootstrapping
 #adapted from Data Science in R: A Gentle Introduction, James G. Scott, August 2021, https://bookdown.org/jgscott/DSGI/
+#take the nmbs from the WTP = 7000 PSA results
 nmb7000 <- nmb_list$'7000'
 nmb7000 <- as.data.frame(nmb7000)
-nmb7000 <- nmb7000 %>% mutate(INMB_LNV = IXCHIQ - NoVax, INMB_RNV = Vimkunya - NoVax, INMBLR = IXCHIQ - Vimkunya)
+nmb7000 <- nmb7000 %>% mutate(INMB_LNV = Live - NoVax, INMB_RNV = Recombo - NoVax, INMBLR = Live - Recombo)
+#create 10,000 bootstrap samples from the PSA results
 bootLCosts <- do(10000)*mean(~v_cost_d, data = mosaic::resample(resultsdf))
 bootLEff <- do(10000)*mean(~v_eff_d, data = mosaic::resample(resultsdf))
 bootNVCosts <- do(10000)*mean(~nv_cost_d, data = mosaic::resample(resultsdf))
 bootNVEff <- do(10000)*mean(~nv_eff_d, data = mosaic::resample(resultsdf))
-bootRCosts <- do(10000) * mean(~v_cost_d, data = mosaic::resample(Vimresultsdf))
-bootREff <- do(10000) * mean(~v_eff_d, data = mosaic::resample(Vimresultsdf))
+bootRCosts <- do(10000) * mean(~v_cost_d, data = mosaic::resample(Recomboresultsdf))
+bootREff <- do(10000) * mean(~v_eff_d, data = mosaic::resample(Recomboresultsdf))
 bootNMBNV <- do(10000)*mean(~NoVax, data = mosaic::resample(nmb7000))
-bootNMBR <- do(10000)*mean(~Vimkunya, data = mosaic::resample(nmb7000))
-bootNMBL <- do(10000)*mean(~IXCHIQ, data = mosaic::resample(nmb7000))
+bootNMBR <- do(10000)*mean(~Recombo, data = mosaic::resample(nmb7000))
+bootNMBL <- do(10000)*mean(~Live, data = mosaic::resample(nmb7000))
 bootINMB_LNV <- do(10000)*mean(~INMB_LNV, data = mosaic::resample(nmb7000))
 bootINMB_RNV <- do(10000)*mean(~INMB_RNV, data = mosaic::resample(nmb7000))
 bootINMBLR <- do(10000) * mean(~INMBLR, data = mosaic::resample(nmb7000))
+#compute confidence intervals of the 10,000 bootstrap samples
 CI_NV_costs <- confint(bootNVCosts, level = 0.95)
 CI_NV_effects <- confint(bootNVEff, level = 0.95)
 CI_R_costs <- confint(bootRCosts, level = 0.95)
