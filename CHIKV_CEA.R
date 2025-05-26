@@ -16,7 +16,7 @@ library(parallel)
 library(dplyr)
 library(tibble)
 #----
-#base_case parameter dataframes
+#base_case parameter lists
 liveattenuated_base_case <- list(
   pbeta = 0.939189937,
   plambda = 0.753403036,
