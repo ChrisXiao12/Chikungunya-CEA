@@ -43,9 +43,9 @@ liveattenuated_base_case <- list(
   C_S = 0.00,
   C_V = 28.89,
   C_E = 0.00,
-  C_I = 235.44,
+  C_I = 169.79,
   C_R = 0.00,
-  C_C = 685.64,
+  C_C = 519.55,
   C_D = 0.00
 )
 
@@ -75,9 +75,9 @@ recombinant_base_case <- list(
   C_S = 0.00,
   C_V = 28.89,
   C_E = 0.00,
-  C_I = 235.44,
+  C_I = 169.79,
   C_R = 0.00,
-  C_C = 685.64,
+  C_C = 519.55,
   C_D = 0.00
 )
 #----
@@ -145,9 +145,10 @@ Chronic_absenteeism_days <- rgamma(1000, shape = 96.1739, scale = 0.1493129)
 Chronic_absenteeism_freq <- rbeta(1000, 56.03872, 8.373601)
 Chronic_caregiving_days <- rgamma(1000, shape = 95.20305, scale = 0.1197441)
 Chronic_caregiving_freq <- rbeta(1000, 197.3991, 383.1864)
-Absenteeism_cost <- rgamma(1000, shape = 61.4656, scale = 0.4822209)
-TC_indirect_infectious <- Absenteeism_cost * ((Infectious_absenteeism_days * Infectious_absenteeism_freq) + (Infectious_caregiving_days * Infectious_caregiving_freq))
-TC_indirect_chronic <- Absenteeism_cost * ((Chronic_absenteeism_days * Chronic_absenteeism_freq) + (Chronic_caregiving_days * Chronic_caregiving_freq))
+Absenteeism_cost <- rgamma(1000, shape = 61.4656, scale = 0.3143222)
+Caregiving_cost <- rgamma(1000, shape = 61.4656, scale = 0.3266868)
+TC_indirect_infectious <- Absenteeism_cost * (Infectious_absenteeism_days * Infectious_absenteeism_freq) + Caregiving_cost * (Infectious_caregiving_days * Infectious_caregiving_freq)
+TC_indirect_chronic <- Absenteeism_cost * (Chronic_absenteeism_days * Chronic_absenteeism_freq) + Caregiving_cost * (Chronic_caregiving_days * Chronic_caregiving_freq)
 C_E_draws <- rep(0,1000)
 C_I_draws <- (Cost_hosp_draws / D_hosp_draws * 7 * P_hosp_draws) + (Infectious_direct * P_nhosp_draws) + TC_indirect_infectious
 C_R_draws <- rep(0,1000)
@@ -378,53 +379,7 @@ INMB_recombovsnovax <- NMB_recombo - NMB_novax
 INMB_livevsrecombo <- NMB_live - NMB_recombo
 #----
 #multicore processing for PSA
-num_cores <- detectCores() - 1
-cl <- makeCluster(num_cores)  # Create parallel cluster
 
-clusterExport(cl, varlist = c("parametersdf", "run_SVEIRD5"))
-
-clusterEvalQ(cl, { library(dplyr); library(tibble) })
-
-#Run parallel execution
-#Runs the SVEIRD function over each row of the PSA draws
-results_list <- parLapply(cl, 1:1000, function(i) {
-  # Load required libraries inside worker
-  library(dplyr)
-  library(tibble)
-
-  run_SVEIRD5(parametersdf[i, ])
-})
-
-# Stop cluster
-stopCluster(cl)
-
-# Convert list to dataframe
-resultsdf <- do.call(rbind, results_list)
-resultsdf <- as.data.frame(resultsdf)
-#----
-#repeat this for the recombinant vaccine
-num_cores <- detectCores() - 1
-cl <- makeCluster(num_cores)  # Create parallel cluster
-
-clusterExport(cl, varlist = c("Recomboparametersdf", "run_SVEIRD5"))
-
-clusterEvalQ(cl, { library(dplyr); library(tibble) })
-
-# Run parallel execution
-Recomboresults_list <- parLapply(cl, 1:1000, function(i) {
-  # Load required libraries inside worker
-  library(dplyr)
-  library(tibble)
-
-  run_SVEIRD5(Recomboparametersdf[i, ])
-})
-
-# Stop cluster
-stopCluster(cl)
-
-# Convert list to dataframe
-Recomboresultsdf <- do.call(rbind, Recomboresults_list)
-Recomboresultsdf <- as.data.frame(Recomboresultsdf)
 #----
 #NMB calculations for PSA
 #create a sequence of WTP values
@@ -463,19 +418,19 @@ df_Live <- data.frame(
     0.939189937, 0.753403036, 0.56112007, 0.001, 0.991, 0.010445067, 6.95098e-06,
     0.018995353, 0.521, 0.03, 1000, 0.9980005, 0.0019995, 0.019230769,
     0.824, 0.00024, 0.700, 0.662, 0.824, 0.494, 0,
-    0, 28.89, 0, 235.44, 0, 685.64, 0, 0.000406
+    0, 28.89, 0, 169.79, 0, 519.55, 0, 0.000406
   ),
   LB = c(
     0.813626024, 0.441964854, 0.503414696, 0.00075, 0.975, 0.007844073, 5.21324e-06,
     0.009543213, 0.445, 0.03, 1000, 0.9985, 0.0015, 0,
     0.820, 0.00018, 0.525, 0.593, 0.820, 0.176, 0,
-    0, 22.09, 0, 41.75, 0, 514.23, 0, 0.000305
+    0, 22.09, 0, 41.75, 0, 389.67, 0, 0.000305
   ),
   UB = c(
     0.985004423, 0.999088118, 0.632120559, 0.00125, 0.998, 0.013039243, 8.68871e-06,
     0.055910442, 0.597, 0.03, 1000, 0.9975, 0.0025, 0,
     0.828, 0.00030, 0.828, 0.721, 0.828, 0.759, 0,
-    0, 36.42, 0, 888.37, 0, 857.05, 0, 0.000508
+    0, 36.42, 0, 888.37, 0, 649.44, 0, 0.000508
   )
 )
 
@@ -490,19 +445,19 @@ df_Recombo <- data.frame(
     0.939189937, 0.753403036, 0.56112007, 0.001, 0.978, 0.010445067, 6.95098e-06,
     0.018995353, 0.521, 0.03, 1000, 0.9980005, 0.0019995, 0.019230769,
     0.824, 0.000331, 0.700, 0.662, 0.824, 0.494, 0,
-    0, 28.89, 0, 235.44, 0, 685.64, 0, 0.005453
+    0, 28.89, 0, 169.79, 0, 519.55, 0, 0.005453
   ),
   LB = c(
     0.813626024, 0.441964854, 0.503414696, 0.00075, 0.972, 0.007844073, 5.21324e-06,
     0.009543213, 0.445, 0.03, 1000, 0.9985, 0.0015, 0,
     0.820, 0.000248, 0.525, 0.593, 0.820, 0.176, 0,
-    0, 22.09, 0, 41.75, 0, 514.23, 0, 0.00409
+    0, 22.09, 0, 41.75, 0, 389.67, 0, 0.00409
   ),
   UB = c(
     0.985004423, 0.999088118, 0.632120559, 0.00125, 0.983, 0.013039243, 8.68871e-06,
     0.055910442, 0.597, 0.03, 1000, 0.9975, 0.0025, 0,
     0.828, 0.000414, 0.828, 0.721, 0.828, 0.759, 0,
-    0, 36.42, 0, 888.37, 0, 857.05, 0, 0.006817
+    0, 36.42, 0, 888.37, 0, 649.44, 0, 0.006817
   )
 )
 wtp <- 7000
@@ -561,11 +516,11 @@ DSA_Live_wide <- DSA_Live_wide %>% mutate(range = abs(`Upper Bound` - `Lower Bou
 DSA_Recombo_wide <- DSA_Recombo_wide %>% mutate(range = abs(`Upper Bound` - `Lower Bound`))
 DSA_Live_wide <- DSA_Live_wide %>% arrange(desc(range))
 #arrange by descending order for range and take only the values that are > 2.5% total INMB
-#This happens to be only the 1-13th parameters
+#This happens to be only the 1-13th parameters for live and 1-14th for recombo
 DSA_Live_wide <- DSA_Live_wide[1:13,]
 DSA_Recombo_wide <- DSA_Recombo_wide %>% arrange(desc(range))
-DSA_Recombo_wide <- DSA_Recombo_wide[1:13,]
-BaseL <- 759068 #the base INMB
+DSA_Recombo_wide <- DSA_Recombo_wide[1:14,]
+BaseL <- 684145 #the base INMB
 sorted_L <- DSA_Live_wide %>%
   arrange(desc(range)) %>%
   pull(Parameter) #pull the parameter name
@@ -578,7 +533,7 @@ plot_dataL <- DSA_Live_wide %>% #turn this make into long format for ggplot
     xmax = pmax(Value, BaseL),
     Parameter = factor(Parameter, levels = rev(sorted_L))
   )
-BaseR <- 694106
+BaseR <- 625486
 sorted_R <- DSA_Recombo_wide %>%
   arrange(desc(range)) %>%
   pull(Parameter)
@@ -606,7 +561,8 @@ param_labels <- c(
   U_I = "Utility Infectious CHIKV",
   U_E = "Utility Exposed",
   U_R = "Utility Recovered",
-  U_S = "Utility Susceptible"
+  U_S = "Utility Susceptible",
+  ptheta = "Vaccine waning rate"
 )
 #----
 #tornado
