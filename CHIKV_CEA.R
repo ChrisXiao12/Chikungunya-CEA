@@ -43,9 +43,9 @@ liveattenuated_base_case <- list(
   C_S = 0.00,
   C_V = 28.89,
   C_E = 0.00,
-  C_I = 169.79,
+  C_I = 150.21,
   C_R = 0.00,
-  C_C = 519.55,
+  C_C = 390.13,
   C_D = 0.00
 )
 
@@ -75,9 +75,9 @@ recombinant_base_case <- list(
   C_S = 0.00,
   C_V = 28.89,
   C_E = 0.00,
-  C_I = 169.79,
+  C_I = 150.21,
   C_R = 0.00,
-  C_C = 519.55,
+  C_C = 390.13,
   C_D = 0.00
 )
 #----
@@ -134,9 +134,8 @@ D_hosp_draws <- rgamma(1000, shape = 61.57906, scale = 0.1761963)
 Cost_hosp_draws <- rgamma(1000, shape = 61.4656, scale = 14.09113)
 P_hosp_draws <- rbeta(1000, 60.43122,3291.949)
 P_nhosp_draws <- 1 - P_hosp_draws
-Outpatient_visit <- rgamma(1000, shape = 1.736605, scale = 8.176875)
-Infectious_direct <- rgamma(1000, shape = 61.45182, scale = 0.5804548)
-Chronic_direct <- rgamma(1000, shape = 61.492, scale = 1.874252)
+Infectious_direct <- rgamma(1000, shape = 61.43431, scale = 0.2557203)
+Chronic_direct <- rgamma(1000, shape = 61.46245, scale = 1.15463)
 Infectious_absenteeism_days <- rgamma(1000,shape = 1.356759, scale = 4.599195)
 Infectious_absenteeism_freq <- rbeta(1000, 26.27682, 3.247697)
 Infectious_caregiving_days <- rgamma(1000, shape = 11.8879, scale = 0.4054543)
@@ -152,7 +151,7 @@ TC_indirect_chronic <- Absenteeism_cost * (Chronic_absenteeism_days * Chronic_ab
 C_E_draws <- rep(0,1000)
 C_I_draws <- (Cost_hosp_draws / D_hosp_draws * 7 * P_hosp_draws) + (Infectious_direct * P_nhosp_draws) + TC_indirect_infectious
 C_R_draws <- rep(0,1000)
-C_C_draws <- Chronic_direct + TC_indirect_chronic + 6 * Outpatient_visit
+C_C_draws <- Chronic_direct + TC_indirect_chronic  #vaccine naive and pbetaSV is beta for susceptible vaccine exposed
 C_D_draws <- rep(0,1000)
 #----
 #create a dataframe of draws for PSA analysis
@@ -379,7 +378,61 @@ INMB_recombovsnovax <- NMB_recombo - NMB_novax
 INMB_livevsrecombo <- NMB_live - NMB_recombo
 #----
 #multicore processing for PSA
+num_cores <- detectCores() - 1
+cl <- makeCluster(num_cores)  # Create parallel cluster
 
+clusterExport(cl, varlist = c("parametersdf", "run_SVEIRD5"))
+
+clusterEvalQ(cl, { library(dplyr); library(tibble) })
+
+#Run parallel execution
+#Runs the SVEIRD function over each row of the PSA draws
+results_list <- parLapply(cl, 1:1000, function(i) {
+  # Load required libraries inside worker
+  library(dplyr)
+  library(tibble)
+
+  run_SVEIRD5(parametersdf[i, ])
+})
+
+# Stop cluster
+stopCluster(cl)
+
+# Convert list to dataframe
+resultsdf <- do.call(rbind, results_list)
+resultsdf <- as.data.frame(resultsdf)
+#----
+#repeat this for the recombinant vaccine
+num_cores <- detectCores() - 1
+cl <- makeCluster(num_cores)  # Create parallel cluster
+
+clusterExport(cl, varlist = c("Recomboparametersdf", "run_SVEIRD5"))
+
+clusterEvalQ(cl, { library(dplyr); library(tibble) })
+
+# Run parallel execution
+Recomboresults_list <- parLapply(cl, 1:1000, function(i) {
+  # Load required libraries inside worker
+  library(dplyr)
+  library(tibble)
+
+  run_SVEIRD5(Recomboparametersdf[i, ])
+})
+
+# Stop cluster
+stopCluster(cl)
+
+# Convert list to dataframe
+Recomboresultsdf <- do.call(rbind, Recomboresults_list)
+Recomboresultsdf <- as.data.frame(Recomboresultsdf)
+#----
+#NMB calculations for PSA
+#create a sequence of WTP values
+wtp_values <- seq(1000,150000, by = 1000)
+ceac_df <- data.frame(WTP = wtp_values, NoVax = NA, Live = NA, Recombo = NA)
+
+nmb_list <- vector("list", length(wtp_values))
+names(nmb_list) <- wtp_values
 #----
 #NMB calculations for PSA
 #create a sequence of WTP values
@@ -418,19 +471,19 @@ df_Live <- data.frame(
     0.939189937, 0.753403036, 0.56112007, 0.001, 0.991, 0.010445067, 6.95098e-06,
     0.018995353, 0.521, 0.03, 1000, 0.9980005, 0.0019995, 0.019230769,
     0.824, 0.00024, 0.700, 0.662, 0.824, 0.494, 0,
-    0, 28.89, 0, 169.79, 0, 519.55, 0, 0.000406
+    0, 28.89, 0, 150.21, 0, 390.13, 0, 0.000406
   ),
   LB = c(
     0.813626024, 0.441964854, 0.503414696, 0.00075, 0.975, 0.007844073, 5.21324e-06,
     0.009543213, 0.445, 0.03, 1000, 0.9985, 0.0015, 0,
     0.820, 0.00018, 0.525, 0.593, 0.820, 0.176, 0,
-    0, 22.09, 0, 41.75, 0, 389.67, 0, 0.000305
+    0, 22.09, 0, 24.48, 0, 292.60, 0, 0.000305
   ),
   UB = c(
     0.985004423, 0.999088118, 0.632120559, 0.00125, 0.998, 0.013039243, 8.68871e-06,
     0.055910442, 0.597, 0.03, 1000, 0.9975, 0.0025, 0,
     0.828, 0.00030, 0.828, 0.721, 0.828, 0.759, 0,
-    0, 36.42, 0, 888.37, 0, 649.44, 0, 0.000508
+    0, 36.42, 0, 575.49, 0, 487.67, 0, 0.000508
   )
 )
 
@@ -445,19 +498,19 @@ df_Recombo <- data.frame(
     0.939189937, 0.753403036, 0.56112007, 0.001, 0.978, 0.010445067, 6.95098e-06,
     0.018995353, 0.521, 0.03, 1000, 0.9980005, 0.0019995, 0.019230769,
     0.824, 0.000331, 0.700, 0.662, 0.824, 0.494, 0,
-    0, 28.89, 0, 169.79, 0, 519.55, 0, 0.005453
+    0, 28.89, 0, 150.21, 0, 390.13, 0, 0.005453
   ),
   LB = c(
     0.813626024, 0.441964854, 0.503414696, 0.00075, 0.972, 0.007844073, 5.21324e-06,
     0.009543213, 0.445, 0.03, 1000, 0.9985, 0.0015, 0,
     0.820, 0.000248, 0.525, 0.593, 0.820, 0.176, 0,
-    0, 22.09, 0, 41.75, 0, 389.67, 0, 0.00409
+    0, 22.09, 0, 24.48, 0, 292.60, 0, 0.00409
   ),
   UB = c(
     0.985004423, 0.999088118, 0.632120559, 0.00125, 0.983, 0.013039243, 8.68871e-06,
     0.055910442, 0.597, 0.03, 1000, 0.9975, 0.0025, 0,
     0.828, 0.000414, 0.828, 0.721, 0.828, 0.759, 0,
-    0, 36.42, 0, 888.37, 0, 649.44, 0, 0.006817
+    0, 36.42, 0, 575.49, 0, 487.67, 0, 0.006817
   )
 )
 wtp <- 7000
@@ -520,7 +573,7 @@ DSA_Live_wide <- DSA_Live_wide %>% arrange(desc(range))
 DSA_Live_wide <- DSA_Live_wide[1:13,]
 DSA_Recombo_wide <- DSA_Recombo_wide %>% arrange(desc(range))
 DSA_Recombo_wide <- DSA_Recombo_wide[1:14,]
-BaseL <- 684145 #the base INMB
+BaseL <- 646632 #the base INMB
 sorted_L <- DSA_Live_wide %>%
   arrange(desc(range)) %>%
   pull(Parameter) #pull the parameter name
@@ -533,7 +586,7 @@ plot_dataL <- DSA_Live_wide %>% #turn this make into long format for ggplot
     xmax = pmax(Value, BaseL),
     Parameter = factor(Parameter, levels = rev(sorted_L))
   )
-BaseR <- 625486
+BaseR <- 591129
 sorted_R <- DSA_Recombo_wide %>%
   arrange(desc(range)) %>%
   pull(Parameter)
