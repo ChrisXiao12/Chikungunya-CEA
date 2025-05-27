@@ -43,9 +43,9 @@ liveattenuated_base_case <- list(
   C_S = 0.00,
   C_V = 28.89,
   C_E = 0.00,
-  C_I = 150.21,
+  C_I = 140.91,
   C_R = 0.00,
-  C_C = 390.13,
+  C_C = 7.60,
   C_D = 0.00
 )
 
@@ -75,13 +75,14 @@ recombinant_base_case <- list(
   C_S = 0.00,
   C_V = 28.89,
   C_E = 0.00,
-  C_I = 150.21,
+  C_I = 140.91,
   C_R = 0.00,
-  C_C = 390.13,
+  C_C = 7.60,
   C_D = 0.00
 )
 #----
 #create variable draws for PSA
+cycle_length <- 1/52
 R0_draws <- rgamma(1000,shape = 54.8258, scale = 0.0620146)
 Lambda_draws <- rgamma(1000,shape = 0.7314914, scale = 1.913898)
 Gamma_draws <- rgamma(1000,shape = 115.7945, scale = 0.007111992)
@@ -134,8 +135,8 @@ D_hosp_draws <- rgamma(1000, shape = 61.57906, scale = 0.1761963)
 Cost_hosp_draws <- rgamma(1000, shape = 61.4656, scale = 14.09113)
 P_hosp_draws <- rbeta(1000, 60.43122,3291.949)
 P_nhosp_draws <- 1 - P_hosp_draws
-Infectious_direct <- rgamma(1000, shape = 61.43431, scale = 0.2557203)
-Chronic_direct <- rgamma(1000, shape = 61.46245, scale = 1.15463)
+Infectious_direct <- rgamma(1000, shape = 61.26875, scale = 0.106832)
+Chronic_direct <- rgamma(1000, shape = 61.4656, scale = 0.9162849)
 Infectious_absenteeism_days <- rgamma(1000,shape = 1.356759, scale = 4.599195)
 Infectious_absenteeism_freq <- rbeta(1000, 26.27682, 3.247697)
 Infectious_caregiving_days <- rgamma(1000, shape = 11.8879, scale = 0.4054543)
@@ -151,7 +152,7 @@ TC_indirect_chronic <- Absenteeism_cost * (Chronic_absenteeism_days * Chronic_ab
 C_E_draws <- rep(0,1000)
 C_I_draws <- (Cost_hosp_draws / D_hosp_draws * 7 * P_hosp_draws) + (Infectious_direct * P_nhosp_draws) + TC_indirect_infectious
 C_R_draws <- rep(0,1000)
-C_C_draws <- Chronic_direct + TC_indirect_chronic  #vaccine naive and pbetaSV is beta for susceptible vaccine exposed
+C_C_draws <- Chronic_direct/270*7 + TC_indirect_chronic * cycle_length
 C_D_draws <- rep(0,1000)
 #----
 #create a dataframe of draws for PSA analysis
@@ -225,9 +226,9 @@ run_SVEIRD5 <- function(params, return_trace = FALSE) {
   C_S <- params[["C_S"]]
   C_E <- params[["C_E"]]
   C_V <- params[["C_V"]]
-  C_I <- params[["C_I"]] #already adjusted in terms of week lengths
+  C_I <- params[["C_I"]]
   C_R <- params[["C_R"]]
-  C_C <- params[["C_C"]] * cycle_length #since cost was estimated in annual costs
+  C_C <- params[["C_C"]]
   C_D <- 0
   names <- c("S", "E", "V", "VE", "I", "R", "C", "D", "N", "Check",
              "SV", "SE", "SVE", "SD", "VVE", "VD", "VEE", "VED", "EI", "ED", "IR", "IC", "ID", "RD", "CR", "CD")
