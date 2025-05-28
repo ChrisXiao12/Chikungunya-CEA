@@ -43,9 +43,9 @@ liveattenuated_base_case <- list(
   C_S = 0.00,
   C_V = 28.89,
   C_E = 0.00,
-  C_I = 140.91,
+  C_I = 143.51,
   C_R = 0.00,
-  C_C = 7.60,
+  C_C = 8.17,
   C_D = 0.00
 )
 
@@ -75,9 +75,9 @@ recombinant_base_case <- list(
   C_S = 0.00,
   C_V = 28.89,
   C_E = 0.00,
-  C_I = 140.91,
+  C_I = 143.51,
   C_R = 0.00,
-  C_C = 7.60,
+  C_C = 8.17,
   C_D = 0.00
 )
 #----
@@ -134,9 +134,8 @@ C_VR_draws <- Vax_Dose_draws_R / (1 - Waste_draws) + Admin_draws
 D_hosp_draws <- rgamma(1000, shape = 61.57906, scale = 0.1761963)
 Cost_hosp_draws <- rgamma(1000, shape = 61.46702, scale = 14.12546)
 P_hosp_draws <- rbeta(1000, 60.43122,3291.949)
-P_nhosp_draws <- 1 - P_hosp_draws
-Infectious_direct <- rgamma(1000, shape = 61.26875, scale = 0.106832)
-Chronic_direct <- rgamma(1000, shape = 61.4656, scale = 0.9162849)
+Infectious_direct <- rgamma(1000, shape = 61.4656, scale = 0.140875)
+Chronic_direct <- rgamma(1000, shape = 61.45931, scale = 1.27647)
 Infectious_absenteeism_days <- rgamma(1000,shape = 1.356759, scale = 4.599195)
 Infectious_absenteeism_freq <- rbeta(1000, 26.27682, 3.247697)
 Infectious_caregiving_days <- rgamma(1000, shape = 11.8879, scale = 0.4054543)
@@ -150,7 +149,7 @@ Caregiving_cost <- rgamma(1000, shape = 61.4656, scale = 0.3266868)
 TC_indirect_infectious <- Absenteeism_cost * (Infectious_absenteeism_days * Infectious_absenteeism_freq) + Caregiving_cost * (Infectious_caregiving_days * Infectious_caregiving_freq)
 TC_indirect_chronic <- Absenteeism_cost * (Chronic_absenteeism_days * Chronic_absenteeism_freq) + Caregiving_cost * (Chronic_caregiving_days * Chronic_caregiving_freq)
 C_E_draws <- rep(0,1000)
-C_I_draws <- (Cost_hosp_draws / D_hosp_draws * 7 * P_hosp_draws) + (Infectious_direct * P_nhosp_draws) + TC_indirect_infectious
+C_I_draws <- (Cost_hosp_draws / D_hosp_draws * 7 * P_hosp_draws) + (Infectious_direct) + TC_indirect_infectious
 C_R_draws <- rep(0,1000)
 C_C_draws <- Chronic_direct/270*7 + TC_indirect_chronic * cycle_length
 C_D_draws <- rep(0,1000)
@@ -472,19 +471,19 @@ df_Live <- data.frame(
     0.939189937, 0.753403036, 0.56112007, 0.001, 0.991, 0.010445067, 6.95098e-06,
     0.018995353, 0.521, 0.03, 1000, 0.9980005, 0.0019995, 0.019230769,
     0.824, 0.00024, 0.700, 0.662, 0.824, 0.494, 0,
-    0, 28.89, 0, 140.91, 0, 7.60, 0, 0.000406
+    0, 28.89, 0, 143.51, 0, 8.17, 0, 0.000406
   ),
   LB = c(
     0.813626024, 0.441964854, 0.503414696, 0.00075, 0.975, 0.007844073, 5.21324e-06,
     0.009543213, 0.445, 0.03, 1000, 0.9985, 0.0015, 0,
     0.820, 0.00018, 0.525, 0.593, 0.820, 0.176, 0,
-    0, 22.09, 0, 17.47, 0, 5.70, 0, 0.000305
+    0, 22.09, 0, 19.40, 0, 6.12, 0, 0.000305
   ),
   UB = c(
     0.985004423, 0.999088118, 0.632120559, 0.00125, 0.998, 0.013039243, 8.68871e-06,
     0.055910442, 0.597, 0.03, 1000, 0.9975, 0.0025, 0,
     0.828, 0.00030, 0.828, 0.721, 0.828, 0.759, 0,
-    0, 36.42, 0, 563.91, 0, 9.50, 0, 0.000508
+    0, 36.42, 0, 567.20, 0, 10.21, 0, 0.000508
   )
 )
 
@@ -499,19 +498,19 @@ df_Recombo <- data.frame(
     0.939189937, 0.753403036, 0.56112007, 0.001, 0.978, 0.010445067, 6.95098e-06,
     0.018995353, 0.521, 0.03, 1000, 0.9980005, 0.0019995, 0.019230769,
     0.824, 0.000331, 0.700, 0.662, 0.824, 0.494, 0,
-    0, 28.89, 0, 140.91, 0, 7.60, 0, 0.005453
+    0, 28.89, 0, 143.51, 0, 8.17, 0, 0.005453
   ),
   LB = c(
     0.813626024, 0.441964854, 0.503414696, 0.00075, 0.972, 0.007844073, 5.21324e-06,
     0.009543213, 0.445, 0.03, 1000, 0.9985, 0.0015, 0,
     0.820, 0.000248, 0.525, 0.593, 0.820, 0.176, 0,
-    0, 22.09, 0, 17.47, 0, 5.70, 0, 0.00409
+    0, 22.09, 0, 19.40, 0, 6.12, 0, 0.00409
   ),
   UB = c(
     0.985004423, 0.999088118, 0.632120559, 0.00125, 0.983, 0.013039243, 8.68871e-06,
     0.055910442, 0.597, 0.03, 1000, 0.9975, 0.0025, 0,
     0.828, 0.000414, 0.828, 0.721, 0.828, 0.759, 0,
-    0, 36.42, 0, 563.91, 0, 9.50, 0, 0.006817
+    0, 36.42, 0, 567.20, 0, 10.21, 0, 0.006817
   )
 )
 wtp <- 7000
@@ -574,7 +573,7 @@ DSA_Live_wide <- DSA_Live_wide %>% arrange(desc(range))
 DSA_Live_wide <- DSA_Live_wide[1:13,]
 DSA_Recombo_wide <- DSA_Recombo_wide %>% arrange(desc(range))
 DSA_Recombo_wide <- DSA_Recombo_wide[1:14,]
-BaseL <- 641448 #the base INMB
+BaseL <- 648794 #the base INMB
 sorted_L <- DSA_Live_wide %>%
   arrange(desc(range)) %>%
   pull(Parameter) #pull the parameter name
@@ -587,7 +586,7 @@ plot_dataL <- DSA_Live_wide %>% #turn this make into long format for ggplot
     xmax = pmax(Value, BaseL),
     Parameter = factor(Parameter, levels = rev(sorted_L))
   )
-BaseR <- 586381
+BaseR <- 593109
 sorted_R <- DSA_Recombo_wide %>%
   arrange(desc(range)) %>%
   pull(Parameter)
