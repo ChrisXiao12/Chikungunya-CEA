@@ -628,11 +628,11 @@ ggplot(plot_dataL) +
   scale_x_continuous(
     limits = c(0,1.5e6),
     breaks = seq(0, 1.5e6, by = 1e5),
-    labels = function(x) sprintf("%.1f", x / 1e5)
+    labels = function(x) sprintf("%.1f", x / 1e6)
   ) +
   scale_y_discrete(labels = param_labels) +
   labs(
-    x = "INMB (Hundred Thousands USD)",
+    x = "INMB (Millions USD)",
     y = "Parameter"
   ) +
   theme_minimal(base_size = 13) +
@@ -657,11 +657,11 @@ ggplot(plot_dataR) +
   scale_x_continuous(
     limits = c(0,1.5e6),
     breaks = seq(0, 1.5e6, by = 1e5),
-    labels = function(x) sprintf("%.1f", x / 1e5)
+    labels = function(x) sprintf("%.1f", x / 1e6)
   ) +
   scale_y_discrete(labels = param_labels) +
   labs(
-    x = "INMB (Hundred Thousands USD)",
+    x = "INMB (Millions USD)",
     y = "Parameter"
   ) +
   theme_minimal(base_size = 13) +
