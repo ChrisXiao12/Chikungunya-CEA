@@ -166,7 +166,7 @@ fit_poly <- function(y = value, time = days, degree = 2){
 
 ## waning rate function: derivative of the polynomial
 waning_function <- function(time = 100, coeffs, degree = 3){
-  sum(sapply(1:degree, function(k) {k * coefs[k+1] * time^(k-1)}))
+  sum(sapply(1:degree, function(k) {k * coeffs[k+1] * time^(k-1)}))
 } 
 
 ## utility functions
