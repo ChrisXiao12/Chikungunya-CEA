@@ -15,4 +15,4 @@ Run-time estimate (16gb ram, AMD Ryzen 9 8945HS processor)
 Base-Case: 1 minute
 OWSA: 14 minutes
 Additional Sensitivity Analyses: ~ 3 hours 40 minutes
-PSA: ~ 3 hours and 15 minutes
+PSA: ~ 3 hours and 15 minutes (1000 iterations)
